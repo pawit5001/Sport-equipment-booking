@@ -1,6 +1,6 @@
 # Sport equipment booking
--Register and Login page
--Detail of booking
+\n-Register and Login page
+\n-Detail of booking
 
 ## Admin
 -Add or manage PIC
