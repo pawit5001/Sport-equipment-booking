@@ -1,46 +1,97 @@
 <?php
 session_start();
-error_reporting(0);
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 include('includes/config.php');
-if($_SESSION['login']!=''){
-$_SESSION['login']='';
-}
-if(isset($_POST['login']))
-{
-  //code for captach verification
-if ($_POST["vercode"] != $_SESSION["vercode"] OR $_SESSION["vercode"]=='')  {
-        echo "<script>alert('รหัสยืนยันไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง!');</script>" ;
-    } 
-        else {
-$email=$_POST['emailid'];
-$password=md5($_POST['password']);
-$sql ="SELECT EmailId,Password,StudentId,Status FROM tblstudents WHERE EmailId=:email and Password=:password";
-$query= $dbh -> prepare($sql);
-$query-> bindParam(':email', $email, PDO::PARAM_STR);
-$query-> bindParam(':password', $password, PDO::PARAM_STR);
-$query-> execute();
-$results=$query->fetchAll(PDO::FETCH_OBJ);
 
-if($query->rowCount() > 0)
-{
- foreach ($results as $result) {
- $_SESSION['stdid']=$result->StudentId;
-if($result->Status==1)
-{
-$_SESSION['login']=$_POST['emailid'];
-echo "<script type='text/javascript'> document.location ='dashboard.php'; </script>";
-} else {
-echo "<script>alert('[บัญชีของคุณถูกล็อก กรุณาติดต่อผู้ดูแล]');</script>";
-
-}
-}
-
-} 
-
-else{
-echo "<script>alert('อีเมลหรือรหัสผ่านไม่ถูกต้อง');</script>";
-}
-}
+// Handle AJAX login request
+if($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['emailid'])) {
+    header('Content-Type: application/json');
+    
+    try {
+        $email = isset($_POST['emailid']) ? trim($_POST['emailid']) : '';
+        $password = isset($_POST['password']) ? trim($_POST['password']) : '';
+        $vercode = isset($_POST['vercode']) ? trim($_POST['vercode']) : '';
+        
+        error_log("LOGIN ATTEMPT - Email: $email, Vercode: $vercode, Session: " . $_SESSION["vercode"]);
+        
+        // Validate captcha
+        if (empty($vercode) || $vercode != $_SESSION["vercode"]) {
+            echo json_encode(array(
+                'type' => 'error',
+                'title' => 'รหัสยืนยันไม่ถูกต้อง',
+                'message' => '<i class="fa fa-shield me-2"></i>กรุณากรอกรหัสยืนยันให้ถูกต้อง',
+                'redirect' => null
+            ));
+            exit;
+        }
+        
+        // Validate required fields
+        if (empty($email) || empty($password)) {
+            echo json_encode(array(
+                'type' => 'error',
+                'title' => 'ข้อมูลไม่ครบ',
+                'message' => '<i class="fa fa-exclamation-circle me-2"></i>กรุณากรอกข้อมูลทั้งหมด',
+                'redirect' => null
+            ));
+            exit;
+        }
+        
+        // Check login credentials
+        $hashedPassword = md5($password);
+        $sql = "SELECT Email, Password, id, Role, Status FROM tblmembers WHERE Email=:email AND Password=:password AND Role IN ('student','admin')";
+        $query = $dbh->prepare($sql);
+        $query->bindParam(':email', $email, PDO::PARAM_STR);
+        $query->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+        $query->execute();
+        
+        if($query->rowCount() > 0) {
+            $result = $query->fetch(PDO::FETCH_OBJ);
+            
+            // Check if user is banned (status != 1)
+            if((int)$result->Status !== 1) {
+                error_log("LOGIN BLOCKED - User banned: Email: $email, Status: " . $result->Status);
+                echo json_encode(array(
+                    'type' => 'warning',
+                    'title' => 'บัญชีถูกแบน ❌',
+                    'message' => '<i class="fa fa-ban me-2"></i><strong>บัญชีของคุณถูกแบนจากการใช้ระบบแล้ว</strong><br/>หากคุณเชื่อว่านี่เป็นข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ผู้ดูแลระบบ',
+                    'redirect' => null
+                ));
+                exit;
+            }
+            
+            $_SESSION['stdid'] = $result->id;
+            $_SESSION['login'] = $email;
+            
+            error_log("LOGIN SUCCESS - Email: $email, ID: " . $result->id);
+            
+            echo json_encode(array(
+                'type' => 'success',
+                'title' => 'เข้าสู่ระบบสำเร็จ',
+                'message' => '<i class="fa fa-check-circle me-2"></i>ยินดีต้อนรับกลับมา',
+                'redirect' => 'dashboard.php'
+            ));
+        } else {
+            error_log("LOGIN FAILED - Email: $email");
+            echo json_encode(array(
+                'type' => 'error',
+                'title' => 'เข้าสู่ระบบล้มเหลว',
+                'message' => '<i class="fa fa-exclamation-circle me-2"></i>อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+                'redirect' => null
+            ));
+        }
+        exit;
+        
+    } catch (Exception $e) {
+        error_log("LOGIN ERROR: " . $e->getMessage());
+        echo json_encode(array(
+            'type' => 'error',
+            'title' => 'เกิดข้อผิดพลาด',
+            'message' => '<i class="fa fa-exclamation-circle me-2"></i>' . htmlspecialchars($e->getMessage()),
+            'redirect' => null
+        ));
+        exit;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -48,77 +99,361 @@ echo "<script>alert('อีเมลหรือรหัสผ่านไม�
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta name="description" content="" />
+    <meta name="description" content="Sports Equipment Booking System" />
     <meta name="author" content="" />
-    <title>E-Sports | Home</title>
-    <!-- BOOTSTRAP CORE STYLE  -->
-    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <title>E-Sports | Login</title>
+    <?php
+    // Dynamically set base href to support subfolder deployments like /E-Sports/
+    $basePath = dirname($_SERVER['SCRIPT_NAME']);
+    $baseHref = ($basePath === DIRECTORY_SEPARATOR || $basePath === '\\' || $basePath === '.' || $basePath === '')
+        ? '/'
+        : rtrim($basePath, '/\\') . '/';
+    ?>
+    <base href="<?php echo htmlspecialchars($baseHref, ENT_QUOTES); ?>">
+    <!-- BOOTSTRAP 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
-    <!-- CUSTOM STYLE  -->
-    <link href="assets/css/style.css" rel="stylesheet" />
+    <!-- MODERN CUSTOM STYLE  -->
+    <link href="assets/css/modern-style.css" rel="stylesheet" />
     <!-- GOOGLE FONT -->
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
-
+    <script type="text/javascript">
+        // Resolve base path robustly for subfolder deployments
+        const BASE_PATH = '<?php echo rtrim(dirname($_SERVER["SCRIPT_NAME"]), "/\\"); ?>';
+        // Modern Modal Alert Function (simple & consistent)
+        function showAlert(type, title, message, redirectUrl = null) {
+            const modalEl = document.getElementById('alertModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            const modalHeader = document.getElementById('modalHeader');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            const modalButton = document.getElementById('modalButton');
+            
+            // Set colors and icons based on type
+            const alertConfig = {
+                'success': { header: '#10b981', icon: 'fa-check-circle', btnColor: 'btn-success' },
+                'error': { header: '#ef4444', icon: 'fa-exclamation-circle', btnColor: 'btn-danger' },
+                'warning': { header: '#f59e0b', icon: 'fa-exclamation-triangle', btnColor: 'btn-warning' },
+                'info': { header: '#3b82f6', icon: 'fa-info-circle', btnColor: 'btn-info' }
+            };
+            const config = alertConfig[type] || alertConfig['info'];
+            
+            // Update modal styles
+            modalHeader.style.background = `linear-gradient(135deg, ${config.header} 0%, ${config.header}dd 100%)`;
+            modalTitle.innerHTML = `<i class="fa ${config.icon} me-2"></i>${title}`;
+            modalBody.innerHTML = `<p class="mb-0" style="font-size: 0.95rem;">${message}</p>`;
+            
+            // Update button
+            modalButton.className = `btn ${config.btnColor}`;
+            modalButton.textContent = redirectUrl ? 'ไปต่อ' : 'ตกลง';
+            
+            // Reset handlers then attach fresh one
+            modalButton.onclick = null;
+            modalButton.onchange = null;
+            const handler = redirectUrl ? () => window.location.href = redirectUrl : () => modal.hide();
+            modalButton.onclick = handler;
+            if (redirectUrl) {
+                setTimeout(handler, 1500);
+            }
+            
+            // Show immediately for consistent feel
+            modal.show();
+        }
+    </script>
 </head>
 <body>
     <!------MENU SECTION START-->
-<?php include('includes/header.php');?>
-<!-- MENU SECTION END-->
-<div class="content-wrapper">
-<div class="container">
-<div class="row pad-botm">
-<div class="col-md-12">
-<h4 class="header-line">สำหรับผู้ใช้ทั่วไป</h4>
-</div>
-</div>
-             
-<!--LOGIN PANEL START-->           
-<div class="row">
-<div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3" >
-<div class="panel panel-info">
-<div class="panel-heading">
- กรุณาระบุข้อมูลให้ครบถ้วน
-</div>
-<div class="panel-body">
-<form role="form" method="post">
+    <?php include('includes/header.php');?>
+    <!-- MENU SECTION END-->
+    
+    <div class="content-wrapper">
+        <div class="container-wrapper">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-5 col-lg-4">
+                        <div class="auth-card">
+                            <div class="auth-card-header">
+                                <h2>
+                                    <i class="fa fa-sign-in me-3"></i>เข้าสู่ระบบ
+                                </h2>
+                            </div>
 
-<div class="form-group">
-<label>อีเมล</label>
-<input class="form-control" type="text" name="emailid" required autocomplete="off" />
-</div>
-<div class="form-group">
-<label>รหัสผ่าน</label>
-<input class="form-control" type="password" name="password" required autocomplete="off"  />
-<p class="help-block"><a href="user-forgot-password.php">ลืมรหัสผ่าน?</a></p>
-</div>
+                            <div class="auth-card-body">
+                                <form id="loginForm" method="post" data-no-auto-loading="1" onsubmit="return submitLoginForm(event)" novalidate>
+                                    <div class="auth-form-group">
+                                        <label for="emailid" class="auth-form-label">
+                                            <i class="fa fa-envelope text-primary me-2"></i>อีเมล
+                                        </label>
+                                        <input type="email" class="form-control auth-form-input" id="emailid" name="emailid" 
+                                            placeholder="your.email@example.com" autocomplete="off" />
+                                    </div>
 
-<div class="form-group">
-    <label>รหัสยืนยัน : </label>
-    <input type="text" class="form-control1" name="vercode" maxlength="5" autocomplete="off" required style="height:25px;" />
-    &nbsp;<img src="captcha.php">
-</div>
+                                    <div class="auth-form-group">
+                                        <label for="password" class="auth-form-label">
+                                            <i class="fa fa-lock text-primary me-2"></i>รหัสผ่าน
+                                        </label>
+                                        <input type="password" class="form-control auth-form-input" id="password" name="password" 
+                                            placeholder="กรอกรหัสผ่าน" autocomplete="off" />
+                                        <small class="text-muted d-block mt-1">
+                                            <a href="user-forgot-password.php" class="text-decoration-none">ลืมรหัสผ่าน?</a>
+                                        </small>
+                                    </div>
 
+                                    <div class="auth-form-group last-field">
+                                        <label class="auth-form-label">
+                                            <i class="fa fa-shield text-primary me-2"></i>รหัสยืนยัน
+                                        </label>
+                                        <div class="d-flex gap-2 align-items-stretch">
+                                            <input type="text" class="form-control auth-form-input flex-grow-1" id="vercode" name="vercode" 
+                                                placeholder="กรอกรหัส" maxlength="5" autocomplete="off" style="font-weight: 600;" />
+                                            <div class="position-relative" style="width: 100px; flex-shrink: 0;">
+                                                <div class="d-flex align-items-center justify-content-center h-100 rounded-2" 
+                                                    style="background-color: #f8f9fa; cursor: pointer; overflow: hidden;" 
+                                                    onClick="refreshCaptcha()" title="คลิกเพื่อเปลี่ยนรหัส">
+                                                    <img id="captchaImg" src="captcha.php" alt="Captcha" 
+                                                        style="height: 100%; width: 100%; object-fit: contain; padding: 2px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
- <button type="submit" name="login" class="btn btn-info">เข้าสู่ระบบ</button> | <a href="signup.php">ยังไม่มีบัญชีผู้ใช้?</a>
-</form>
- </div>
-</div>
-</div>
-</div>  
-<!---LOGIN PABNEL END-->            
-             
- 
+                                    <button type="submit" name="login" class="btn btn-primary btn-lg auth-submit-btn" id="submit">
+                                        <i class="fa fa-sign-in me-2"></i>เข้าสู่ระบบ
+                                    </button>
+
+                                    <div class="auth-divider">
+                                        <hr>
+                                        <span>หรือ</span>
+                                        <hr>
+                                    </div>
+
+                                    <p class="auth-footer-text">
+                                        ยังไม่มีบัญชี? <a href="signup.php" class="fw-600 text-decoration-none">ลงทะเบียนตอนนี้</a>
+                                    </p>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <!-- CONTENT-WRAPPER SECTION END-->
+
+    <?php include('includes/footer.php');?>
+    <!-- FOOTER SECTION END-->
+
+    <!-- Modal Alert -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3" style="overflow: hidden;">
+                <div class="modal-header border-0" id="modalHeader" style="padding: 1.5rem; background: linear-gradient(135deg, #3b82f6 0%, #3b82f6dd 100%); color: white;">
+                    <h6 class="modal-title fw-700" id="modalTitle" style="margin: 0;">
+                        <i class="fa fa-info-circle me-2"></i>แจ้งเตือน
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="modalBody" style="font-size: 0.95rem;">
+                    <p class="mb-0">ข้อความแจ้งเตือน</p>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-light">
+                    <button type="button" class="btn btn-info px-4" id="modalButton" data-bs-dismiss="modal">ตกลง</button>
+                </div>
+            </div>
+        </div>
     </div>
-     <!-- CONTENT-WRAPPER SECTION END-->
- <?php include('includes/footer.php');?>
-      <!-- FOOTER SECTION END-->
-    <script src="assets/js/jquery-1.10.2.js"></script>
-    <!-- BOOTSTRAP SCRIPTS  -->
-    <script src="assets/js/bootstrap.js"></script>
-      <!-- CUSTOM SCRIPTS  -->
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- CUSTOM SCRIPTS  -->
     <script src="assets/js/custom.js"></script>
+    <!-- MODERN INTERACTIONS -->
+    <script src="assets/js/interactions.js"></script>
 
+    <script>
+        // Captcha countdown variables
+        let captchaCountdown = 30;
+        let captchaTimer = null;
+
+        // Captcha refresh function with countdown
+        function refreshCaptcha() {
+            const captchaImg = document.getElementById('captchaImg');
+            const timestamp = new Date().getTime();
+            const url = (BASE_PATH ? BASE_PATH : '') + '/captcha.php?t=' + timestamp;
+            captchaImg.src = url;
+            
+            // Reset countdown
+            captchaCountdown = 30;
+            updateCountdownDisplay();
+            
+            // Start countdown timer
+            if (captchaTimer) clearInterval(captchaTimer);
+            captchaTimer = setInterval(function() {
+                captchaCountdown--;
+                updateCountdownDisplay();
+                
+                if (captchaCountdown <= 0) {
+                    clearInterval(captchaTimer);
+                    refreshCaptcha(); // Auto-refresh
+                }
+            }, 1000);
+        }
+
+        function updateCountdownDisplay() {
+            const countdownEl = document.getElementById('captchaCountdown');
+            if (!countdownEl) return;
+            
+            countdownEl.textContent = captchaCountdown;
+            
+            // Change badge color based on time remaining
+            const badgeEl = countdownEl.parentElement;
+            if (captchaCountdown <= 10) {
+                badgeEl.classList.remove('bg-warning');
+                badgeEl.classList.add('bg-danger');
+                badgeEl.classList.remove('text-dark');
+                badgeEl.classList.add('text-white');
+            } else {
+                badgeEl.classList.add('bg-warning');
+                badgeEl.classList.remove('bg-danger');
+                badgeEl.classList.add('text-dark');
+                badgeEl.classList.remove('text-white');
+            }
+        }
+
+        // Initialize countdown when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshCaptcha();
+        });
+
+        function validateLoginForm(form) {
+            const email = form.emailid.value.trim();
+            const password = form.password.value;
+            const vercode = form.vercode.value.trim();
+            
+            if (!email) {
+                showAlert('warning', 'ข้อมูลไม่ครบ', '<i class="fa fa-envelope me-2"></i>กรุณากรอกอีเมล');
+                return false;
+            }
+            
+            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+                showAlert('warning', 'รูปแบบไม่ถูกต้อง', '<i class="fa fa-exclamation-circle me-2"></i>กรุณากรอกอีเมลให้ถูกต้อง');
+                return false;
+            }
+            
+            if (!password) {
+                showAlert('warning', 'ข้อมูลไม่ครบ', '<i class="fa fa-lock me-2"></i>กรุณากรอกรหัสผ่าน');
+                return false;
+            }
+            
+            if (!vercode) {
+                showAlert('warning', 'ข้อมูลไม่ครบ', '<i class="fa fa-shield me-2"></i>กรุณากรอกรหัสยืนยัน');
+                return false;
+            }
+            
+            if (vercode.length !== 5) {
+                showAlert('warning', 'ข้อมูลไม่ถูกต้อง', '<i class="fa fa-exclamation-circle me-2"></i>รหัสยืนยันต้องมี 5 หลัก');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function submitLoginForm(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            const form = event.target;
+            let keepLoading = false;
+            
+            // Validate form BEFORE disabling button
+            if (!validateLoginForm(form)) {
+                return false;
+            }
+            
+            // Only disable button AFTER validation passes
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const defaultHTML = submitBtn.getAttribute('data-default-html') || '<i class="fa fa-sign-in me-2"></i>เข้าสู่ระบบ';
+            const spinnerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>กำลังเข้าสู่ระบบ...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled');
+            submitBtn.setAttribute('aria-disabled', 'true');
+            submitBtn.setAttribute('aria-busy', 'true');
+            submitBtn.style.pointerEvents = 'none';
+            submitBtn.innerHTML = spinnerHTML;
+            submitBtn.blur();
+
+            const restoreButton = (btn) => {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+                btn.removeAttribute('aria-disabled');
+                btn.setAttribute('aria-busy', 'false');
+                btn.style.pointerEvents = '';
+                btn.innerHTML = defaultHTML;
+            };
+            
+            // Prepare form data
+            const formData = new FormData(form);
+            
+            // Submit via AJAX with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 10000); // 10 second timeout
+            
+            const postUrl = (BASE_PATH ? BASE_PATH : '') + '/index.php';
+            fetch(postUrl, {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
+                // Check if response is ok (200-299)
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Try to parse JSON
+                return response.json().catch(err => {
+                    throw new Error('ไม่สามารถประมวลผลข้อมูลจากเซิร์ฟเวอร์');
+                });
+            })
+            .then(data => {
+                // Success response received
+                if (data.type === 'success') {
+                    keepLoading = true; // Keep spinner only for success path
+                    showAlert(data.type, data.title, data.message, data.redirect);
+                } else {
+                    // Error response - restore button
+                    document.getElementById('vercode').value = '';
+                    refreshCaptcha();
+                    restoreButton(submitBtn);
+                    keepLoading = false;
+                    showAlert(data.type, data.title, data.message, null);
+                }
+            })
+            .catch(error => {
+                clearTimeout(timeoutId);
+                
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'เซิร์ฟเวอร์ตอบสนองช้า กรุณาลองใหม่';
+                }
+                
+                // Restore button on error
+                restoreButton(submitBtn);
+                keepLoading = false;
+                
+                showAlert('error', 'เกิดข้อผิดพลาด', '<i class="fa fa-exclamation-circle me-2"></i>' + errorMsg);
+            })
+            .finally(() => {
+                if (!keepLoading) {
+                    restoreButton(submitBtn);
+                }
+            });
+            
+            return false;
+        }
+    </script>
 </body>
 </html>

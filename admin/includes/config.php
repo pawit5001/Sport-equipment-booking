@@ -1,9 +1,12 @@
 <?php 
+// Set timezone to Thailand
+date_default_timezone_set('Asia/Bangkok');
+
 // DB credentials.
 define('DB_HOST','localhost');
 define('DB_USER','root');
 define('DB_PASS','');
-define('DB_NAME','library');
+define('DB_NAME','sports_equipment_booking');
 // Establish database connection.
 try
 {

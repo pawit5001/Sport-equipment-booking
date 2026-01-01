@@ -5,7 +5,7 @@ require_once("includes/config.php");
 if (!empty($_POST["mobileno"])) {
     $mobileno = strtoupper($_POST["mobileno"]);
 
-    $sql = "SELECT FullName,Status FROM tblstudents WHERE MobileNumber=:mobileno";
+    $sql = "SELECT Name,Role FROM tblmembers WHERE StudentID=:mobileno";
     $query = $dbh->prepare($sql);
     $query->bindParam(':mobileno', $mobileno, PDO::PARAM_STR);
     $query->execute();
@@ -14,17 +14,17 @@ if (!empty($_POST["mobileno"])) {
     
     if ($query->rowCount() > 0) {
         foreach ($results as $result) {
-            if ($result->Status == 0) {
+            if ($result->Role != 'student') {
                 echo "<span style='color:red'> บัญชีถูกล็อก </span>" . "<br />";
-                echo "<b>Student Name-</b>" . htmlentities($result->FullName);
+                echo "<b>Name-</b>" . htmlentities($result->Name);
                 echo "<script>$('#submit').prop('disabled',true);</script>";
             } else {
-                echo htmlentities($result->FullName);
+                echo htmlentities($result->Name);
                 echo "<script>$('#submit').prop('disabled',false);</script>";
             }
         }
     } else {
-        echo "<span style='color:red'> ไม่พบรหัสนักศึกษานี้ กรุณาลองใหม่อีกครั้ง</span>";
+        echo "<span style='color:red'> ไม่พบ Student Number นี้ กรุณาลองใหม่อีกครั้ง</span>";
         echo "<script>$('#submit').prop('disabled',true);</script>";
     }
 }

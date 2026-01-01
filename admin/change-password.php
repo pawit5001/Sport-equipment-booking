@@ -2,33 +2,33 @@
 session_start();
 include('includes/config.php');
 error_reporting(0);
-if(strlen($_SESSION['login'])==0)
-    {   
-header('location:index.php');
+if (strlen($_SESSION['alogin']) == 0) {
+  header('location:../adminlogin.php');
+  exit;
 }
 else{ 
 if(isset($_POST['change']))
   {
 $password=md5($_POST['password']);
 $newpassword=md5($_POST['newpassword']);
-$username=$_SESSION['alogin'];
-  $sql ="SELECT Password FROM admin where UserName=:username and Password=:password";
+$email=$_SESSION['alogin'];
+  $sql ="SELECT Password FROM tblmembers WHERE Email=:email AND Password=:password";
 $query= $dbh -> prepare($sql);
-$query-> bindParam(':username', $username, PDO::PARAM_STR);
+$query-> bindParam(':email', $email, PDO::PARAM_STR);
 $query-> bindParam(':password', $password, PDO::PARAM_STR);
 $query-> execute();
 $results = $query -> fetchAll(PDO::FETCH_OBJ);
 if($query -> rowCount() > 0)
 {
-$con="update admin set Password=:newpassword where UserName=:username";
+$con="UPDATE tblmembers SET Password=:newpassword WHERE Email=:email";
 $chngpwd1 = $dbh->prepare($con);
-$chngpwd1-> bindParam(':username', $username, PDO::PARAM_STR);
+$chngpwd1-> bindParam(':email', $email, PDO::PARAM_STR);
 $chngpwd1-> bindParam(':newpassword', $newpassword, PDO::PARAM_STR);
 $chngpwd1->execute();
-$msg="Your Password succesfully changed";
+$msg="เปลี่ยนรหัสผ่านสำเร็จ";
 }
 else {
-$error="Your current password is wrong";  
+$error="รหัสผ่านปัจจุบันไม่ถูกต้อง";  
 }
 }
 
@@ -42,11 +42,13 @@ $error="Your current password is wrong";
     <meta name="author" content="" />
     <title>E-Sports | Admin Password Reset</title>
     <!-- BOOTSTRAP CORE STYLE  -->
-    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <!-- CUSTOM STYLE  -->
     <link href="assets/css/style.css" rel="stylesheet" />
+    <!-- MODERN STYLE (shared at root assets) -->
+    <link href="../assets/css/modern-style.css" rel="stylesheet" />
     <!-- GOOGLE FONT -->
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
   <style>
@@ -136,9 +138,11 @@ return true;
       <!-- FOOTER SECTION END-->
     <script src="assets/js/jquery-1.10.2.js"></script>
     <!-- BOOTSTRAP SCRIPTS  -->
-    <script src="assets/js/bootstrap.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <!-- CUSTOM SCRIPTS  -->
     <script src="assets/js/custom.js"></script>
+    <!-- MODERN INTERACTIONS (shared at root assets) -->
+    <script src="../assets/js/interactions.js"></script>
 </body>
 </html>
 <?php } ?>

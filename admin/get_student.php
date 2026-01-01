@@ -3,7 +3,7 @@ require_once("includes/config.php");
 if(!empty($_POST["mobileno"])) {
   $mobileno= strtoupper($_POST["mobileno"]);
  
-    $sql ="SELECT FullName,Status FROM tblstudents WHERE MobileNumber=:mobileno";
+    $sql ="SELECT MemberName FROM tblmembers WHERE MobileNumber=:mobileno";
 $query= $dbh -> prepare($sql);
 $query-> bindParam(':mobileno', $mobileno, PDO::PARAM_STR);
 $query-> execute();
@@ -29,7 +29,7 @@ echo htmlentities($result->FullName);
 }
  else{
   
-  echo "<span style='color:red'> ไม่พบรหัสนักศึกษานี้ กรุณาลองใหม่อีกครั้ง</span>";
+  echo "<span style='color:red'> ไม่พบ Student Number นี้ กรุณาลองใหม่อีกครั้ง</span>";
  echo "<script>$('#submit').prop('disabled',true);</script>";
 }
 }

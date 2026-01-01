@@ -33,11 +33,11 @@ if (strlen($_SESSION['alogin']) == 0) {
         if (count($ids) === 0) {
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => false, 'error' => 'กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ']);
+                echo json_encode(['ok' => false, 'error' => 'กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 รายการ']);
                 exit;
             } else {
-                $_SESSION['admin_error'] = "กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ";
-                header('location:manage-categories.php');
+                $_SESSION['admin_error'] = "กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 รายการ";
+                header('location:manage-suppliers.php');
                 exit;
             }
         }
@@ -45,46 +45,46 @@ if (strlen($_SESSION['alogin']) == 0) {
             $dbh->beginTransaction();
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
-            // Prevent FK violation: block delete if equipment still links to these categories
-            $check = $dbh->prepare("SELECT COUNT(*) AS cnt FROM tblequipment WHERE CatId IN ($placeholders)");
+            // Prevent FK violation: check if any equipment still references these suppliers
+            $check = $dbh->prepare("SELECT COUNT(*) AS cnt FROM tblequipment WHERE SupplierId IN ($placeholders)");
             $check->execute($ids);
             $refCount = (int) $check->fetchColumn();
             if ($refCount > 0) {
                 $dbh->rollBack();
                 if ($isAjax) {
                     header('Content-Type: application/json; charset=UTF-8');
-                    echo json_encode(['ok' => false, 'error' => 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับหมวดหมู่ (' . $refCount . ' รายการ)']);
+                    echo json_encode(['ok' => false, 'error' => 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับผู้รับผิดชอบ (' . $refCount . ' รายการ)']);
                 } else {
-                    $_SESSION['admin_error'] = 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับหมวดหมู่ (' . $refCount . ' รายการ)';
-                    header('location:manage-categories.php');
+                    $_SESSION['admin_error'] = 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับผู้รับผิดชอบ (' . $refCount . ' รายการ)';
+                    header('location:manage-suppliers.php');
                 }
                 exit;
             }
 
-            $stmt = $dbh->prepare("DELETE FROM tblcategory WHERE id IN ($placeholders)");
+            $stmt = $dbh->prepare("DELETE FROM tblsuppliers WHERE id IN ($placeholders)");
             $stmt->execute($ids);
             $deleted = $stmt->rowCount();
             $dbh->commit();
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => true, 'msg' => 'ลบหมวดหมู่ที่เลือกสำเร็จ']);
+                echo json_encode(['ok' => true, 'msg' => 'ลบผู้รับผิดชอบที่เลือกสำเร็จ']);
                 exit;
             } else {
-                $_SESSION['admin_msg'] = "ลบหมวดหมู่ที่เลือกสำเร็จ";
-                header('location:manage-categories.php');
+                $_SESSION['admin_msg'] = "ลบผู้รับผิดชอบที่เลือกสำเร็จ";
+                header('location:manage-suppliers.php');
                 exit;
             }
         } catch (Exception $ex) {
             if ($dbh->inTransaction()) { $dbh->rollBack(); }
             $friendly = 'เกิดข้อผิดพลาดในการลบ';
-            error_log('[manage-categories] delete failed: ' . $ex->getMessage());
+            error_log('[manage-suppliers] delete failed: ' . $ex->getMessage());
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
                 echo json_encode(['ok' => false, 'error' => $friendly]);
                 exit;
             } else {
                 $_SESSION['admin_error'] = $friendly;
-                header('location:manage-categories.php');
+                header('location:manage-suppliers.php');
                 exit;
             }
         }
@@ -103,14 +103,14 @@ if (!empty($_SESSION['admin_msg'])) {
     $_SESSION['admin_msg'] = "";
 }
 
-// Fetch all categories (include updated date)
+// Fetch all suppliers (include status + updated date)
 try {
-    $result = $dbh->query("SELECT id, CategoryName, Status, CreationDate AS CreatedDate, UpdationDate AS UpdatedDate FROM tblcategory ORDER BY id DESC");
-    $categories = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
+    $result = $dbh->query("SELECT id, SupplierName, Status, creationDate AS CreatedDate, UpdationDate AS UpdatedDate FROM tblsuppliers ORDER BY id DESC");
+    $suppliers = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
 } catch (Exception $ex) {
-    // Fallback if UpdationDate column is missing
-    $result = $dbh->query("SELECT id, CategoryName, Status, CreationDate AS CreatedDate FROM tblcategory ORDER BY id DESC");
-    $categories = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
+    // Fallback if Status/UpdationDate columns are missing
+    $result = $dbh->query("SELECT id, SupplierName, creationDate AS CreatedDate FROM tblsuppliers ORDER BY id DESC");
+    $suppliers = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
 }
 ?>
 
@@ -121,7 +121,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>E-Sports | Manage Categories</title>
+    <title>E-Sports | Manage Suppliers</title>
     <!-- BOOTSTRAP CORE STYLE  -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
@@ -144,7 +144,7 @@ try {
         <div class="container">
             <div class="row pad-botm">
                 <div class="col-md-12">
-                    <h4 class="header-line">จัดการหมวดหมู่</h4>
+                    <h4 class="header-line">จัดการผู้รับผิดชอบ</h4>
                 </div>
             </div>
             <div class="row">
@@ -169,7 +169,7 @@ try {
                                         <thead>
                                             <tr>
                                                 <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAll" title="เลือกทั้งหมด" /></th>
-                                                <th>ชื่อหมวดหมู่</th>
+                                                <th>ชื่อผู้รับผิดชอบ</th>
                                                 <th class="status-col">สถานะ</th>
                                                 <th>วันที่เพิ่ม</th>
                                                 <th>อัปเดตล่าสุด</th>
@@ -177,28 +177,34 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php if(!empty($categories)) {
-                                                foreach($categories as $row) { ?>
+                                            <?php if(!empty($suppliers)) {
+                                                foreach($suppliers as $row) { ?>
                                             <tr class="odd gradeX">
                                                 <td class="center" style="text-align:center;"><input type="checkbox" name="selected_ids[]" value="<?php echo htmlentities($row->id);?>" /></td>
                                                 <td class="center">
-                                                    <div style="font-weight:600;"><?php echo htmlentities($row->CategoryName);?></div>
+                                                    <div style="font-weight:600;"><?php echo htmlentities($row->SupplierName);?></div>
                                                 </td>
                                                 <td class="center status-col">
-                                                    <?php if ((int)$row->Status === 1) { ?>
-                                                        <span class="badge status-badge bg-success">พร้อมใช้งาน</span>
-                                                    <?php } else { ?>
-                                                        <span class="badge status-badge bg-secondary">ไม่พร้อมใช้งาน</span>
-                                                    <?php } ?>
+                                                    <?php
+                                                        $statusVal = isset($row->Status) ? (int)$row->Status : 1;
+                                                        if ($statusVal === 1) {
+                                                            echo '<span class="badge status-badge bg-success">พร้อมใช้งาน</span>';
+                                                        } else {
+                                                            echo '<span class="badge status-badge bg-secondary">ไม่พร้อมใช้งาน</span>';
+                                                        }
+                                                    ?>
                                                 </td>
                                                 <td class="center">
-                                                    <?php echo htmlentities(date('d-m-Y H:i:s', strtotime($row->CreatedDate)));?>
+                                                    <?php echo htmlentities(date('d-m-Y H:i:s', strtotime($row->CreatedDate ?? $row->creationDate)));?>
                                                 </td>
                                                 <td class="center">
-                                                    <?php echo !empty($row->UpdatedDate) ? htmlentities(date('d-m-Y H:i:s', strtotime($row->UpdatedDate))) : '-'; ?>
+                                                    <?php
+                                                        $updatedDate = $row->UpdatedDate ?? $row->UpdationDate ?? null;
+                                                        echo !empty($updatedDate) ? htmlentities(date('d-m-Y H:i:s', strtotime($updatedDate))) : '-';
+                                                    ?>
                                                 </td>
                                                 <td class="center">
-                                                    <a href="edit-category.php?id=<?php echo htmlentities($row->id);?>" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i> แก้ไข</a>
+                                                    <a href="edit-supplier.php?id=<?php echo htmlentities($row->id);?>" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i> แก้ไข</a>
                                                 </td>
                                             </tr>
                                             <?php }} ?>                                      

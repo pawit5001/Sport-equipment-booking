@@ -1,88 +1,156 @@
 ﻿
-/*=============================================================
-    Authour URI: www.binarytheme.com
-    License: Commons Attribution 3.0
-
-    http://creativecommons.org/licenses/by/3.0/
-
-    100% Free To use For Personal And Commercial Use.
-    IN EXCHANGE JUST GIVE US CREDITS AND TELL YOUR FRIENDS ABOUT US
-   
-    ========================================================  */
-
-
+/* 
+    Sports Equipment Booking System - Modern UI
+    Created 2025
+*/
 
 /* =============================================================
    GENERAL STYLES
  ============================================================ */
 
-body {
-    font-family: 'Open Sans', sans-serif;
-    line-height:28px;
-   
-}
-.set-radius-zero {
-    border-radius:0px;
-    -moz-border-radius:0px;
-    -webkit-border-radius:0px;
-}
-.content-wrapper {
-    margin-top: 40px;
-    min-height:800px;
-    padding-bottom:90px;
-}
-.header-line {
-    font-weight:900;
-    padding-bottom:25px;
-    border-bottom:1px solid #eeeeee;
-    text-transform:uppercase;
-}
-.pad-botm {
-    padding-bottom:30px;
+:root {
+    --primary-color: #1e40af;
+    --secondary-color: #0891b2;
+    --accent-color: #f59e0b;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --dark-bg: #0f172a;
+    --light-bg: #f8fafc;
+    --text-dark: #1e293b;
+    --text-light: #64748b;
+    --border-color: #e2e8f0;
 }
 
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--text-dark);
+    background-color: #fff;
+}
+
+.set-radius-zero {
+    border-radius: 0px;
+}
+
+.content-wrapper {
+    margin-top: 0;
+    min-height: auto;
+    padding: 32px 0;
+    background-color: #fff;
+}
+
+.header-line {
+    font-weight: 700;
+    padding-bottom: 15px;
+    border-bottom: 3px solid var(--primary-color);
+    text-transform: uppercase;
+    color: var(--text-dark);
+    font-size: 1.5rem;
+}
+
+.pad-botm {
+    padding-bottom: 30px;
+}
 
 /* =============================================================
-   NAVBAR & MENU STYLES
+   NAVBAR & MENU STYLES (Bootstrap 5)
  ============================================================ */
 
-.right-div {
-    float: right; 
-    padding: 20px;
-}
-#menu-top a {
-    color:#000;
-    text-decoration:none;
-    font-weight:500;
-    padding: 25px 15px 25px 15px;
-    text-transform:uppercase;
-
-}
-.menu-section {
-    background-color: #f7f7f7;
-    border-bottom:5px solid #9170E4;
-    width:100%
-}
-.menu-top-active {
-    background-color:#eeeeee;
-}
-.navbar-inverse {
-background-color: #FFF;
-border-color: rgba(155, 153, 153, 0.23);
-
-}
-
 .navbar {
-    min-height: 90px;
-    margin-bottom: 0px;
-   
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+    min-height: auto;
 }
-.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
-    border-color:transparent;
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-.navbar-toggle {
-background-color: black;
-border: 1px solid black;
+
+.navbar-brand img {
+    height: 50px;
+    width: auto;
+}
+
+.right-div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-logout {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.menu-section {
+    background-color: #ffffff;
+    border-top: 4px solid var(--accent-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#menu-top {
+    list-style: none;
+    display: flex;
+    gap: 0;
+    justify-content: flex-end;
+}
+
+#menu-top li {
+    position: relative;
+}
+
+#menu-top a {
+    color: var(--text-dark);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 15px 20px;
+    display: block;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+#menu-top a:hover {
+    color: var(--primary-color);
+    background-color: var(--light-bg);
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.dropdown-menu {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem 0;
+}
+
+.dropdown-menu a {
+    color: var(--text-dark);
+    padding: 0.75rem 1.5rem;
+}
+
+.dropdown-menu a:hover {
+    background-color: var(--light-bg);
+    color: var(--primary-color);
 }
 
     /* =============================================================

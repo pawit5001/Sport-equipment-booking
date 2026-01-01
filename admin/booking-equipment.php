@@ -3,8 +3,9 @@ session_start();
 error_reporting(0);
 include('includes/config.php');
 
-if(strlen($_SESSION['login'])==0) {   
-    header('location:index.php');
+if (strlen($_SESSION['alogin']) == 0) {   
+    header('location:../adminlogin.php');
+    exit;
 } else { 
     if(isset($_POST['issue'])) {
         $mobileno = strtoupper($_POST['mobileno']);
@@ -12,7 +13,7 @@ if(strlen($_SESSION['login'])==0) {
         $quantity = $_POST['quantity'];
     
         // ดึงจำนวนอุปกรณ์ที่เหลือ
-        $sqlQuantity = "SELECT Quantity FROM tblbooks WHERE id = :bookid";
+        $sqlQuantity = "SELECT Quantity FROM tblequipment WHERE id = :bookid";
         $queryQuantity = $dbh->prepare($sqlQuantity);
         $queryQuantity->bindParam(':bookid', $bookid, PDO::PARAM_STR);
         $queryQuantity->execute();
@@ -21,14 +22,14 @@ if(strlen($_SESSION['login'])==0) {
         if ($resultQuantity['Quantity'] >= $quantity) {
             // ลดจำนวนอุปกรณ์ตามจำนวนที่ยืม
             $newQuantity = $resultQuantity['Quantity'] - $quantity;
-            $updateQuantitySql = "UPDATE tblbooks SET Quantity = :newQuantity WHERE id = :bookid";
+            $updateQuantitySql = "UPDATE tblequipment SET Quantity = :newQuantity WHERE id = :bookid";
             $updateQuantityQuery = $dbh->prepare($updateQuantitySql);
             $updateQuantityQuery->bindParam(':newQuantity', $newQuantity, PDO::PARAM_INT);
             $updateQuantityQuery->bindParam(':bookid', $bookid, PDO::PARAM_STR);
             $updateQuantityQuery->execute();
     
             // เพิ่มรายการยืม
-            $sql = "INSERT INTO tblissuedbookdetails(MobileNumber, BookId, Quantity) VALUES(:mobileno, :bookid, :quantity)";
+            $sql = "INSERT INTO tblbookingdetails(MobileNumber, EquipmentId, Quantity) VALUES(:mobileno, :bookid, :quantity)";
             $query = $dbh->prepare($sql);
             $query->bindParam(':mobileno', $mobileno, PDO::PARAM_STR);
             $query->bindParam(':bookid', $bookid, PDO::PARAM_STR);
@@ -38,15 +39,15 @@ if(strlen($_SESSION['login'])==0) {
             $lastInsertId = $dbh->lastInsertId();
     
             if ($lastInsertId) {
-                $_SESSION['msg'] = "เพิ่มรายการยืมสำเร็จ";
-                header('location:manage-issued-books.php');
+                $_SESSION['admin_msg'] = "เพิ่มรายการยืมสำเร็จ";
+                header('location:manage-bookings.php');
             } else {
-                $_SESSION['error'] = "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
-                header('location:manage-issued-books.php');
+                $_SESSION['admin_error'] = "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+                header('location:manage-bookings.php');
             }
         } else {
-            $_SESSION['error'] = "อุปกรณ์ไม่เพียงพอ";
-            header('location:manage-issued-books.php');
+            $_SESSION['admin_error'] = "อุปกรณ์ไม่เพียงพอ";
+            header('location:manage-bookings.php');
         }
     }
     
@@ -58,13 +59,15 @@ if(strlen($_SESSION['login'])==0) {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>E-Sports | Sports</title>
+    <title>E-Sports | Book Equipment</title>
     <!-- BOOTSTRAP CORE STYLE  -->
-    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <!-- CUSTOM STYLE  -->
     <link href="assets/css/style.css" rel="stylesheet" />
+    <!-- MODERN STYLE (shared at root assets) -->
+    <link href="../assets/css/modern-style.css" rel="stylesheet" />
     <!-- GOOGLE FONT -->
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
     <script>
@@ -87,7 +90,7 @@ if(strlen($_SESSION['login'])==0) {
         function getbook() {
             $("#loaderIcon").show();
             jQuery.ajax({
-                url: "get_book.php",
+                url: "get_equipment.php",
                 data:'bookid='+$("#bookid").val(),
                 type: "POST",
                 success:function(data){
@@ -122,7 +125,7 @@ if(strlen($_SESSION['login'])==0) {
                         <div class="panel-body">
                             <form role="form" method="post">
                                 <div class="form-group">
-                                    <label>รหัสนักศึกษา <span style="color:red;">*</span></label>
+                                    <label>Student Number <span style="color:red;">*</span></label>
                                     <input class="form-control" type="text" name="mobileno" id="mobileno" onBlur="getstudent()" autocomplete="off"  required />
                                 </div>
                                 <div class="form-group">
@@ -153,8 +156,10 @@ if(strlen($_SESSION['login'])==0) {
     </div>
     <?php include('includes/footer.php');?>
     <script src="assets/js/jquery-1.10.2.js"></script>
-    <script src="assets/js/bootstrap.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/custom.js"></script>
+    <!-- MODERN INTERACTIONS (shared at root assets) -->
+    <script src="../assets/js/interactions.js"></script>
 </body>
 </html>
 <?php } ?>

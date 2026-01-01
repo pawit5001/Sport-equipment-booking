@@ -1,9 +1,9 @@
 <?php 
 // DB credentials.
 define('DB_HOST','localhost');
-define('DB_USER','admin');
-define('DB_PASS','admin');
-define('DB_NAME','library');
+define('DB_USER','root');
+define('DB_PASS','');
+define('DB_NAME','sports_equipment_booking');
 // Establish database connection.
 try
 {

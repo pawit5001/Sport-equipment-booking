@@ -1,4 +1,53 @@
-﻿
+﻿/* DEBUG: Force icon color to red for visibility */
+.toggleActiveForm .btn i.fa {
+    color: red !important;
+}
+/* --- FORCE ICON CENTER FOR TOGGLE BUTTON --- */
+.toggleActiveForm .btn {
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    font-size: 1.2rem;
+    background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.toggleActiveForm .btn i.fa {
+    width: 1.5em;
+    height: 1.5em;
+    text-align: center;
+    font-size: 1.3em;
+    line-height: 1.5em;
+    margin: 0 auto;
+    color: #fff;
+    display: inline-block;
+}
+/* --- FIX: Toggle Button Size & Icon Consistency --- */
+.toggleActiveForm .btn {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    font-size: 1.1rem;
+    transition: background 0.2s, color 0.2s;
+}
+.toggleActiveForm .btn i.fa {
+    width: 1.2em;
+    text-align: center;
+    font-size: 1.1em;
+    vertical-align: middle;
+}
+.toggleActiveForm .btn .fa-spinner {
+    width: 1.2em;
+    text-align: center;
+    font-size: 1.1em;
+}
+
 /*=============================================================
     Authour URI: www.binarytheme.com
     License: Commons Attribution 3.0

@@ -1,60 +1,84 @@
 <?php
+header('Content-Type: text/html; charset=utf-8');
 session_start();
-require_once('includes/config.php');
+error_reporting(0);
+include('includes/config.php');
 
-// Authentication check
-if (!isset($_SESSION['alogin']) || strlen($_SESSION['alogin']) == 0) {
+if(!isset($_SESSION['alogin']) || strlen($_SESSION['alogin']) == 0)
+{   
     header('location:../adminlogin.php');
-    exit;
-}
-
-$id = intval($_GET['id'] ?? 0);
-
-// Handle form submission (AJAX)
-if (!empty($_POST['update']) && !empty($_POST['ajax'])) {
-    header('Content-Type: application/json');
-    try {
-        $categoryName = trim($_POST['CategoryName'] ?? '');
-        $status = isset($_POST['Status']) && $_POST['Status'] === '0' ? 0 : 1;
-        if (empty($categoryName)) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่ไม่ได้ระบุ']);
-            exit;
+    exit();
+} else {
+    // Handle form submission (AJAX)
+    if (!empty($_POST['update']) && !empty($_POST['ajax'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $id = intval($_POST['id']);
+            $name = trim($_POST['Name'] ?? '');
+            $surname = trim($_POST['Surname'] ?? '');
+            $email = trim($_POST['Email'] ?? '');
+            $status = isset($_POST['Status']) && $_POST['Status'] === '0' ? 0 : 1;
+            $role = in_array($_POST['Role'] ?? '', ['admin', 'member']) ? $_POST['Role'] : 'member';
+            
+            if (empty($name) || empty($surname) || empty($email)) {
+                echo json_encode(['ok' => false, 'error' => 'กรุณากรอกข้อมูลให้ครบถ้วน']);
+                exit;
+            }
+            
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                echo json_encode(['ok' => false, 'error' => 'รูปแบบอีเมลไม่ถูกต้อง']);
+                exit;
+            }
+            
+            $stmt = $dbh->prepare("SELECT id FROM tblmembers WHERE Email = ? AND id != ? LIMIT 1");
+            $stmt->execute([$email, $id]);
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(['ok' => false, 'error' => 'อีเมลนี้มีอยู่ในระบบแล้ว']);
+                exit;
+            }
+            
+            $stmt = $dbh->prepare("UPDATE tblmembers SET Name = ?, Surname = ?, Email = ?, Status = ?, Role = ?, UpdationDate = NOW() WHERE id = ?");
+            if ($stmt->execute([$name, $surname, $email, $status, $role, $id])) {
+                echo json_encode(['ok' => true, 'msg' => 'แก้ไขข้อมูลสมาชิกสำเร็จ']);
+            } else {
+                echo json_encode(['ok' => false, 'error' => 'ไม่สามารถแก้ไขข้อมูลได้']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['ok' => false, 'error' => 'ข้อผิดพลาด: ' . $e->getMessage()]);
         }
-        $stmt = $dbh->prepare("SELECT id FROM tblcategory WHERE CategoryName = ? AND id != ? LIMIT 1");
-        $stmt->execute([$categoryName, $id]);
-        if ($stmt->rowCount() > 0) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่นี้มีอยู่แล้ว']);
-            exit;
-        }
-        $stmt = $dbh->prepare("UPDATE tblcategory SET CategoryName = ?, Status = ?, UpdationDate = NOW() WHERE id = ?");
-        if ($stmt->execute([$categoryName, $status, $id])) {
-            echo json_encode(['ok' => true, 'msg' => 'แก้ไขหมวดหมู่สำเร็จ']);
-        } else {
-            echo json_encode(['ok' => false, 'error' => 'ไม่สามารถแก้ไขหมวดหมู่ได้']);
-        }
-    } catch (Exception $e) {
-        echo json_encode(['ok' => false, 'error' => 'ข้อผิดพลาด: ' . $e->getMessage()]);
+        exit;
     }
-    exit;
-}
-
-// Fetch category data
-$stmt = $dbh->prepare("SELECT * FROM tblcategory WHERE id = ?");
-$stmt->execute([$id]);
-$result = $stmt->fetch(PDO::FETCH_OBJ);
-
-if (!$result) {
-    $_SESSION['admin_error'] = 'ไม่พบหมวดหมู่';
-    header('location:manage-categories.php');
-    exit;
+    
+    if(isset($_GET['id']))
+    {
+        $id = intval($_GET['id']);
+        
+        // Fetch student details
+        $sql = "SELECT id, Name, Surname, Email, StudentID, Status, Role FROM tblmembers WHERE id=:id";
+        $query = $dbh->prepare($sql);
+        $query->bindParam(':id', $id, PDO::PARAM_INT);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_OBJ);
+        
+        if(!$result) {
+            header('location:reg-students.php');
+            exit();
+        }
+    } else {
+        header('location:reg-students.php');
+        exit();
+    }
 }
 ?>
+
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>E-Sports | Edit Category</title>
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>แก้ไขสมาชิก | E-Sports</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <link href="assets/css/style.css" rel="stylesheet" />
@@ -62,33 +86,61 @@ if (!$result) {
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
 </head>
 <body>
-    <?php include('includes/header.php');?>
+<?php include('includes/header.php');?>
     <div class="content-wrapper" style="margin-top: 60px; padding-bottom: 40px;">
         <div class="container">
             <div class="row pad-botm">
                 <div class="col-md-12">
-                    <h4 class="header-line">แก้ไขหมวดหมู่</h4>
+                    <h4 class="header-line">แก้ไขข้อมูลสมาชิก</h4>
                 </div>
             </div>
+            
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-primary text-white">รายละเอียดหมวดหมู่</div>
+                        <div class="card-header bg-primary text-white">รายละเอียดสมาชิก</div>
                         <div class="card-body">
                             <form class="row g-3" role="form" method="post" novalidate>
+                                <input type="hidden" name="id" value="<?php echo htmlentities($result->id); ?>">
+                                
                                 <div class="col-md-6">
-                                    <label class="form-label">ชื่อหมวดหมู่<span style="color:red;">*</span></label>
-                                    <input class="form-control" type="text" name="CategoryName" value="<?php echo htmlentities($result->CategoryName);?>" required />
+                                    <label class="form-label">ชื่อ<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="text" name="Name" value="<?php echo htmlentities($result->Name); ?>" required />
                                 </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">นามสกุล<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="text" name="Surname" value="<?php echo htmlentities($result->Surname); ?>" required />
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">รหัสนักศึกษา<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="text" value="<?php echo htmlentities($result->StudentID); ?>" readonly>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">อีเมล<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="email" name="Email" value="<?php echo htmlentities($result->Email); ?>" required />
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">บทบาท<span style="color:red;">*</span></label>
+                                    <select class="form-select" name="Role" required>
+                                        <option value="member" <?php echo ($result->Role == 'member') ? 'selected' : ''; ?>>นักศึกษา</option>
+                                        <option value="admin" <?php echo ($result->Role == 'admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ</option>
+                                    </select>
+                                </div>
+                                
                                 <div class="col-md-6">
                                     <label class="form-label">สถานะ<span style="color:red;">*</span></label>
                                     <select class="form-select" name="Status" required>
-                                        <option value="1" <?php echo ($result->Status == 1) ? 'selected' : ''; ?>>พร้อมใช้งาน</option>
-                                        <option value="0" <?php echo ($result->Status == 0) ? 'selected' : ''; ?>>ไม่พร้อมใช้งาน</option>
+                                        <option value="1" <?php echo ((int)$result->Status === 1) ? 'selected' : ''; ?>>ปกติ</option>
+                                        <option value="0" <?php echo ((int)$result->Status === 0) ? 'selected' : ''; ?>>ถูกแบน</option>
                                     </select>
                                 </div>
+                                
                                 <div class="col-12 d-flex gap-2 mt-3" style="gap: 0.5rem !important;">
-                                    <a href="manage-categories.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
+                                    <a href="reg-students.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
                                     <button type="submit" name="update" class="btn btn-success"><i class="fa fa-save"></i> บันทึกการแก้ไข</button>
                                 </div>
                             </form>
@@ -98,7 +150,6 @@ if (!$result) {
             </div>
         </div>
     </div>
-    <?php include('includes/footer.php');?>
     
     <!-- Success Modal -->
     <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
@@ -148,7 +199,10 @@ if (!$result) {
             </div>
         </div>
     </div>
-    
+
+<?php include('includes/footer.php');?>
+      
+      
     <script src="assets/js/jquery-1.10.2.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/custom.js?v=2"></script>
@@ -187,7 +241,7 @@ if (!$result) {
                         var successModal = new bootstrap.Modal(document.getElementById('successModal'));
                         successModal.show();
                         $('#successModal').on('hidden.bs.modal', function () {
-                            window.location.href = 'manage-categories.php';
+                            window.location.href = 'reg-students.php';
                         });
                     } else {
                         var msg = (resp && resp.error) ? resp.error : 'เกิดข้อผิดพลาด';

@@ -8,44 +8,44 @@ if (!isset($_SESSION['alogin']) || strlen($_SESSION['alogin']) == 0) {
     exit;
 }
 
-$id = intval($_GET['id'] ?? 0);
-
 // Handle form submission (AJAX)
-if (!empty($_POST['update']) && !empty($_POST['ajax'])) {
+if (!empty($_POST['add']) && !empty($_POST['ajax'])) {
     header('Content-Type: application/json');
+    
     try {
-        $categoryName = trim($_POST['CategoryName'] ?? '');
+        $supplierName = trim($_POST['SupplierName'] ?? '');
         $status = isset($_POST['Status']) && $_POST['Status'] === '0' ? 0 : 1;
-        if (empty($categoryName)) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่ไม่ได้ระบุ']);
+        
+        if (empty($supplierName)) {
+            echo json_encode(['ok' => false, 'error' => 'ชื่อผู้รับผิดชอบไม่ได้ระบุ']);
             exit;
         }
-        $stmt = $dbh->prepare("SELECT id FROM tblcategory WHERE CategoryName = ? AND id != ? LIMIT 1");
-        $stmt->execute([$categoryName, $id]);
+        
+        // Check for duplicates
+        $stmt = $dbh->prepare("SELECT id FROM tblsuppliers WHERE SupplierName = ? LIMIT 1");
+        $stmt->execute([$supplierName]);
+        
         if ($stmt->rowCount() > 0) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่นี้มีอยู่แล้ว']);
+            echo json_encode(['ok' => false, 'error' => 'ผู้รับผิดชอบนี้มีอยู่แล้ว']);
             exit;
         }
-        $stmt = $dbh->prepare("UPDATE tblcategory SET CategoryName = ?, Status = ?, UpdationDate = NOW() WHERE id = ?");
-        if ($stmt->execute([$categoryName, $status, $id])) {
-            echo json_encode(['ok' => true, 'msg' => 'แก้ไขหมวดหมู่สำเร็จ']);
+        
+        // Insert new supplier
+        $stmt = $dbh->prepare("INSERT INTO tblsuppliers (SupplierName, Status, creationDate) VALUES (?, ?, NOW())");
+        
+        if ($stmt->execute([$supplierName, $status])) {
+            $newId = $dbh->lastInsertId();
+            echo json_encode([
+                'ok' => true,
+                'id' => $newId,
+                'msg' => 'เพิ่มผู้รับผิดชอบสำเร็จ'
+            ]);
         } else {
-            echo json_encode(['ok' => false, 'error' => 'ไม่สามารถแก้ไขหมวดหมู่ได้']);
+            echo json_encode(['ok' => false, 'error' => 'ไม่สามารถเพิ่มผู้รับผิดชอบได้']);
         }
     } catch (Exception $e) {
         echo json_encode(['ok' => false, 'error' => 'ข้อผิดพลาด: ' . $e->getMessage()]);
     }
-    exit;
-}
-
-// Fetch category data
-$stmt = $dbh->prepare("SELECT * FROM tblcategory WHERE id = ?");
-$stmt->execute([$id]);
-$result = $stmt->fetch(PDO::FETCH_OBJ);
-
-if (!$result) {
-    $_SESSION['admin_error'] = 'ไม่พบหมวดหมู่';
-    header('location:manage-categories.php');
     exit;
 }
 ?>
@@ -54,7 +54,7 @@ if (!$result) {
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>E-Sports | Edit Category</title>
+    <title>E-Sports | Add Supplier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <link href="assets/css/style.css" rel="stylesheet" />
@@ -67,29 +67,29 @@ if (!$result) {
         <div class="container">
             <div class="row pad-botm">
                 <div class="col-md-12">
-                    <h4 class="header-line">แก้ไขหมวดหมู่</h4>
+                    <h4 class="header-line">เพิ่มผู้รับผิดชอบ</h4>
                 </div>
             </div>
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-primary text-white">รายละเอียดหมวดหมู่</div>
+                        <div class="card-header bg-primary text-white">รายละเอียดผู้รับผิดชอบ</div>
                         <div class="card-body">
                             <form class="row g-3" role="form" method="post" novalidate>
                                 <div class="col-md-6">
-                                    <label class="form-label">ชื่อหมวดหมู่<span style="color:red;">*</span></label>
-                                    <input class="form-control" type="text" name="CategoryName" value="<?php echo htmlentities($result->CategoryName);?>" required />
+                                    <label class="form-label">ชื่อผู้รับผิดชอบ<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="text" name="SupplierName" placeholder="ระบุชื่อผู้รับผิดชอบ" required />
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">สถานะ<span style="color:red;">*</span></label>
                                     <select class="form-select" name="Status" required>
-                                        <option value="1" <?php echo ($result->Status == 1) ? 'selected' : ''; ?>>พร้อมใช้งาน</option>
-                                        <option value="0" <?php echo ($result->Status == 0) ? 'selected' : ''; ?>>ไม่พร้อมใช้งาน</option>
+                                        <option value="1" selected>พร้อมใช้งาน</option>
+                                        <option value="0">ไม่พร้อมใช้งาน</option>
                                     </select>
                                 </div>
                                 <div class="col-12 d-flex gap-2 mt-3" style="gap: 0.5rem !important;">
-                                    <a href="manage-categories.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
-                                    <button type="submit" name="update" class="btn btn-success"><i class="fa fa-save"></i> บันทึกการแก้ไข</button>
+                                    <a href="manage-suppliers.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
+                                    <button type="submit" name="add" class="btn btn-success"><i class="fa fa-save"></i> เพิ่มผู้รับผิดชอบ</button>
                                 </div>
                             </form>
                         </div>
@@ -132,79 +132,63 @@ if (!$result) {
         </div>
     </div>
     
-    <!-- Confirm Update Modal -->
-    <div class="modal fade" id="confirmUpdateModal" tabindex="-1" aria-labelledby="confirmUpdateLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="confirmUpdateLabel">ยืนยันการแก้ไข</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">คุณแน่ใจหรือว่าต้องการบันทึกการแก้ไข?</div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-success" id="confirmUpdateBtn">ยืนยันการแก้ไข</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <script src="assets/js/jquery-1.10.2.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/custom.js?v=2"></script>
     <script src="../assets/js/interactions.js?v=2"></script>
     <script>
-    $(document).ready(function() {
+    $(function(){
         var $form = $('form[method="post"]');
-        var confirmModalEl = document.getElementById('confirmUpdateModal');
-        var confirmModal = confirmModalEl ? new bootstrap.Modal(confirmModalEl) : null;
-        var pendingFormData = null;
-
-        $form.on('submit', function(e) {
+        $form.on('submit', function(e){
             e.preventDefault();
-            pendingFormData = new FormData(this);
-            pendingFormData.append('ajax', '1');
-            pendingFormData.append('update', '1');
-            if (confirmModal) confirmModal.show();
-        });
-
-        $('#confirmUpdateBtn').on('click', function() {
-            if (!pendingFormData) return;
-            if (confirmModal) confirmModal.hide();
-            var $btn = $form.find('button[name="update"]');
-            if ($btn.length) $btn.prop('disabled', true).addClass('disabled');
-
+            
+            var supplierName = $('input[name="SupplierName"]').val().trim();
+            var status = $('select[name="Status"]').val();
+            
+            if (!supplierName) {
+                $('#errorModalBody').text('กรุณากรอกชื่อผู้รับผิดชอบ');
+                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                errorModal.show();
+                return;
+            }
+            
+            var formData = new FormData(this);
+            formData.append('ajax', '1');
+            formData.append('add', '1');
+            var $submit = $(this).find('button[type="submit"]');
+            $submit.prop('disabled', true).addClass('disabled').html('<i class="fa fa-spinner fa-spin me-1"></i> กำลังบันทึก...');
+            
             $.ajax({
-                url: window.location.href,
-                type: 'POST',
-                dataType: 'json',
-                data: pendingFormData,
-                processData: false,
+                url: 'add-supplier.php',
+                method: 'POST',
+                data: formData,
                 contentType: false,
-                success: function(resp) {
-                    if (resp && resp.ok) {
-                        $('#successModalBody').text(resp.msg || 'แก้ไขสำเร็จ');
+                processData: false,
+                dataType: 'json',
+                timeout: 20000,
+                success: function(res){
+                    if (res && res.ok) {
+                        $('#successModalBody').text('เพิ่มผู้รับผิดชอบสำเร็จ');
                         var successModal = new bootstrap.Modal(document.getElementById('successModal'));
                         successModal.show();
+                        $form[0].reset();
                         $('#successModal').on('hidden.bs.modal', function () {
-                            window.location.href = 'manage-categories.php';
+                            window.location.href = 'manage-suppliers.php';
                         });
                     } else {
-                        var msg = (resp && resp.error) ? resp.error : 'เกิดข้อผิดพลาด';
+                        var msg = (res && res.error) ? res.error : 'เพิ่มผู้รับผิดชอบไม่สำเร็จ';
                         $('#errorModalBody').text(msg);
                         var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                         errorModal.show();
-                        if ($btn.length) $btn.prop('disabled', false).removeClass('disabled');
                     }
                 },
-                error: function(xhr) {
-                    $('#errorModalBody').text('เกิดข้อผิดพลาดในการส่งข้อมูล');
+                error: function(jqXHR, textStatus, errorThrown){
+                    $('#errorModalBody').text('เครือข่ายมีปัญหา ลองใหม่อีกครั้ง');
                     var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                     errorModal.show();
-                    if ($btn.length) $btn.prop('disabled', false).removeClass('disabled');
                 },
-                complete: function() {
-                    pendingFormData = null;
+                complete: function(){
+                    $submit.removeClass('disabled').prop('disabled', false).html('<i class="fa fa-save"></i> เพิ่มผู้รับผิดชอบ');
                 }
             });
         });

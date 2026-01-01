@@ -2,12 +2,12 @@
 session_start();
 error_reporting(0);
 include('includes/config.php');
-if(strlen($_SESSION['login'])==0)
-{   
-    header('location:index.php');
+if (strlen($_SESSION['alogin']) == 0) {
+    header('location:../adminlogin.php');
+    exit;
 }
 else{ 
-    $student_id_from_db = $_SESSION['login'];
+    $student_id_from_db = $_SESSION['alogin'];
 
     if(isset($_POST['return'])) {
         $rid = intval($_GET['rid']);
@@ -16,7 +16,7 @@ else{
         $rstatus = 1;
     
         // ดึงข้อมูลจำนวนที่ยืมไป
-        $sqlGetBorrowedQuantity = "SELECT Quantity FROM tblissuedbookdetails WHERE id=:rid";
+        $sqlGetBorrowedQuantity = "SELECT Quantity FROM tblbookingdetails WHERE id=:rid";
         $queryGetBorrowedQuantity = $dbh->prepare($sqlGetBorrowedQuantity);
         $queryGetBorrowedQuantity->bindParam(':rid', $rid, PDO::PARAM_STR);
         $queryGetBorrowedQuantity->execute();
@@ -25,20 +25,20 @@ else{
     
         // ตรวจสอบว่าจำนวนที่คืนไม่เกินจำนวนที่ถูกยืม
         if ($quantityReturned > $borrowedQuantity) {
-            $_SESSION['error'] = "ไม่สามารถคืนเกินจำนวนที่ถูกยืมไปได้";
-            header('location:manage-issued-books.php');
+            $_SESSION['admin_error'] = "ไม่สามารถคืนเกินจำนวนที่ถูกยืมไปได้";
+            header('location:manage-issued-equipment.php');
             exit;
         }
     
         // ตรวจสอบว่าจำนวนที่คืนมีค่าไม่น้อยกว่าศูนย์
         if ($quantityReturned <= 0) {
-            $_SESSION['error'] = "กรุณาระบุจำนวนที่คืนเป็นจำนวนที่มากกว่า 0";
-            header('location:manage-issued-books.php');
+            $_SESSION['admin_error'] = "กรุณาระบุจำนวนที่คืนเป็นจำนวนที่มากกว่า 0";
+            header('location:manage-issued-equipment.php');
             exit;
         }
     
-        // อัปเดตจำนวนที่คืนในตาราง tblissuedbookdetails
-        $sqlUpdateIssuedBook = "UPDATE tblissuedbookdetails SET fine=:fine, QuantityReturned=:quantityReturned, RetrunStatus=:rstatus WHERE id=:rid";
+        // อัปเดตจำนวนที่คืนในตาราง tblbookingdetails
+        $sqlUpdateIssuedBook = "UPDATE tblbookingdetails SET fine=:fine, QuantityReturned=:quantityReturned, RetrunStatus=:rstatus WHERE id=:rid";
         $queryUpdateIssuedBook = $dbh->prepare($sqlUpdateIssuedBook);
         $queryUpdateIssuedBook->bindParam(':rid', $rid, PDO::PARAM_STR);
         $queryUpdateIssuedBook->bindParam(':fine', $fine, PDO::PARAM_STR);
@@ -46,15 +46,15 @@ else{
         $queryUpdateIssuedBook->bindParam(':rstatus', $rstatus, PDO::PARAM_STR);
         $queryUpdateIssuedBook->execute();
     
-        // อัปเดตจำนวนที่ในตาราง tblbooks
-        $sqlUpdateBooks = "UPDATE tblbooks SET Quantity = Quantity + :quantityReturned WHERE id IN (SELECT BookId FROM tblissuedbookdetails WHERE id=:rid)";
+        // อัปเดตจำนวนที่ในตาราง tblequipment
+        $sqlUpdateBooks = "UPDATE tblequipment SET Quantity = Quantity + :quantityReturned WHERE id IN (SELECT EquipmentId FROM tblbookingdetails WHERE id=:rid)";
         $queryUpdateBooks = $dbh->prepare($sqlUpdateBooks);
         $queryUpdateBooks->bindParam(':quantityReturned', $quantityReturned, PDO::PARAM_INT);
         $queryUpdateBooks->bindParam(':rid', $rid, PDO::PARAM_STR);
         $queryUpdateBooks->execute();
     
-        $_SESSION['msg'] = "คืนอุปกรณ์กีฬาสำเร็จ";
-        header('location:manage-issued-books.php');
+        $_SESSION['admin_msg'] = "คืนอุปกรณ์กีฬาสำเร็จ";
+        header('location:manage-issued-equipment.php');
     }
      
 ?>
@@ -65,13 +65,15 @@ else{
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>E-Sports | Sports</title>
+    <title>E-Sports | Update Issue</title>
     <!-- BOOTSTRAP CORE STYLE  -->
-    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <!-- CUSTOM STYLE  -->
     <link href="assets/css/style.css" rel="stylesheet" />
+    <!-- MODERN STYLE (shared at root assets) -->
+    <link href="../assets/css/modern-style.css" rel="stylesheet" />
     <!-- GOOGLE FONT -->
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
     <script>
@@ -89,14 +91,14 @@ else{
             });
         }
 
-        function getbook() {
+        function getequipment() {
             $("#loaderIcon").show();
             jQuery.ajax({
-                url: "get_book.php",
-                data:'bookid='+$("#bookid").val(),
+                url: "get_equipment.php",
+                data:'equipmentid='+$("#equipmentid").val(),
                 type: "POST",
                 success:function(data){
-                    $("#get_book_name").html(data);
+                    $("#get_equipment_name").html(data);
                     $("#loaderIcon").hide();
                 },
                 error:function (){}
@@ -128,7 +130,7 @@ else{
                             <form role="form" method="post">
                                 <?php 
                                 $rid=intval($_GET['rid']);
-                                $sql = "SELECT tblstudents.FullName,tblbooks.BookName,tblbooks.ISBNNumber,tblissuedbookdetails.IssuesDate,tblissuedbookdetails.ReturnDate, tblissuedbookdetails.RetrunStatus, tblissuedbookdetails.QuantityReturned , tblissuedbookdetails.id as rid,tblissuedbookdetails.fine,tblissuedbookdetails.RetrunStatus from  tblissuedbookdetails join tblstudents on tblstudents.MobileNumber=tblissuedbookdetails.MobileNumber join tblbooks on tblbooks.id=tblissuedbookdetails.BookId where tblissuedbookdetails.id=:rid";
+                                $sql = "SELECT tblmembers.MemberName,tblequipment.EquipmentName,tblequipment.EquipmentCode,tblbookingdetails.BookingDate,tblbookingdetails.ReturnDate, tblbookingdetails.RetrunStatus, tblbookingdetails.QuantityReturned , tblbookingdetails.id as rid,tblbookingdetails.fine,tblbookingdetails.RetrunStatus from  tblbookingdetails join tblmembers on tblmembers.MobileNumber=tblbookingdetails.MobileNumber join tblequipment on tblequipment.id=tblbookingdetails.EquipmentId where tblbookingdetails.id=:rid";
                                 $query = $dbh->prepare($sql);
                                 $query->bindParam(':rid',$rid,PDO::PARAM_STR);
                                 $query->execute();
@@ -140,22 +142,22 @@ else{
                                     { ?>
                                         <div class="form-group">
                                             <label>ชื่อ นามสกุล :</label>
-                                            <?php echo htmlentities($result->FullName);?>
+                                            <?php echo htmlentities($result->MemberName);?>
                                         </div>
 
                                         <div class="form-group">
                                             <label>ชื่ออุปกรณ์กีฬา: </label>
-                                            <?php echo htmlentities($result->BookName);?>
+                                            <?php echo htmlentities($result->EquipmentName);?>
                                         </div>
 
                                         <div class="form-group">
                                             <label>รหัสอุปกรณ์กีฬา :</label>
-                                            <?php echo htmlentities($result->ISBNNumber);?>
+                                            <?php echo htmlentities($result->EquipmentCode);?>
                                         </div>
 
                                         <div class="form-group">
                                             <label>วัน/เดือน/ปี ที่ยืม :</label>
-                                            <?php echo htmlentities($result->IssuesDate);?>
+                                            <?php echo htmlentities($result->BookingDate);?>
                                         </div>
 
                                         <div class="form-group">
@@ -175,9 +177,9 @@ else{
                                         <div class="form-group">
                                             <label>จำนวนที่คืน :</label>
                                             <?php 
-                                            if(($result->ReturnStatus == 0) && ($result->QuantityReturned=="")) {
+                                            if(($result->RetrunStatus == 0) && ($result->QuantityReturned=="")) {
                                                 echo '<input class="form-control" type="number" name="quantityReturned" id="quantityReturned" required />';
-                                            } elseif ($result->ReturnStatus == 0) {
+                                            } elseif ($result->RetrunStatus == 0) {
                                                 echo htmlentities($result->QuantityReturned);
                                             }
                                             ?>
@@ -198,11 +200,11 @@ else{
 
                                         <?php if($result->RetrunStatus==0){?>
     <!-- ปุ่มคืนอุปกรณ์กีฬา -->
-    <a href="manage-issued-books.php" class="btn btn-primary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
+    <a href="manage-issued-equipment.php" class="btn btn-primary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
     <button type="submit" name="return" id="submit" class="btn btn-success">คืนอุปกรณ์กีฬา</button>
 <?php } else { ?>
     <!-- ปุ่มย้อนกลับ -->
-    <a href="manage-issued-books.php" class="btn btn-primary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
+    <a href="manage-issued-equipment.php" class="btn btn-primary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
 <?php } ?>
 
                                     <?php } 
@@ -220,9 +222,11 @@ else{
     <!-- CORE JQUERY  -->
     <script src="assets/js/jquery-1.10.2.js"></script>
     <!-- BOOTSTRAP SCRIPTS  -->
-    <script src="assets/js/bootstrap.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- CUSTOM SCRIPTS  -->
     <script src="assets/js/custom.js"></script>
+    <!-- MODERN INTERACTIONS (shared at root assets) -->
+    <script src="../assets/js/interactions.js"></script>
 </body>
 </html>
 <?php } ?>

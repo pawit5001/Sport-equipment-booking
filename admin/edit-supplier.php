@@ -14,23 +14,23 @@ $id = intval($_GET['id'] ?? 0);
 if (!empty($_POST['update']) && !empty($_POST['ajax'])) {
     header('Content-Type: application/json');
     try {
-        $categoryName = trim($_POST['CategoryName'] ?? '');
+        $supplierName = trim($_POST['SupplierName'] ?? '');
         $status = isset($_POST['Status']) && $_POST['Status'] === '0' ? 0 : 1;
-        if (empty($categoryName)) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่ไม่ได้ระบุ']);
+        if (empty($supplierName)) {
+            echo json_encode(['ok' => false, 'error' => 'ชื่อผู้รับผิดชอบไม่ได้ระบุ']);
             exit;
         }
-        $stmt = $dbh->prepare("SELECT id FROM tblcategory WHERE CategoryName = ? AND id != ? LIMIT 1");
-        $stmt->execute([$categoryName, $id]);
+        $stmt = $dbh->prepare("SELECT id FROM tblsuppliers WHERE SupplierName = ? AND id != ? LIMIT 1");
+        $stmt->execute([$supplierName, $id]);
         if ($stmt->rowCount() > 0) {
-            echo json_encode(['ok' => false, 'error' => 'ชื่อหมวดหมู่นี้มีอยู่แล้ว']);
+            echo json_encode(['ok' => false, 'error' => 'ชื่อผู้รับผิดชอบนี้มีอยู่แล้ว']);
             exit;
         }
-        $stmt = $dbh->prepare("UPDATE tblcategory SET CategoryName = ?, Status = ?, UpdationDate = NOW() WHERE id = ?");
-        if ($stmt->execute([$categoryName, $status, $id])) {
-            echo json_encode(['ok' => true, 'msg' => 'แก้ไขหมวดหมู่สำเร็จ']);
+        $stmt = $dbh->prepare("UPDATE tblsuppliers SET SupplierName = ?, Status = ?, UpdationDate = NOW() WHERE id = ?");
+        if ($stmt->execute([$supplierName, $status, $id])) {
+            echo json_encode(['ok' => true, 'msg' => 'แก้ไขผู้รับผิดชอบสำเร็จ']);
         } else {
-            echo json_encode(['ok' => false, 'error' => 'ไม่สามารถแก้ไขหมวดหมู่ได้']);
+            echo json_encode(['ok' => false, 'error' => 'ไม่สามารถแก้ไขผู้รับผิดชอบได้']);
         }
     } catch (Exception $e) {
         echo json_encode(['ok' => false, 'error' => 'ข้อผิดพลาด: ' . $e->getMessage()]);
@@ -38,14 +38,14 @@ if (!empty($_POST['update']) && !empty($_POST['ajax'])) {
     exit;
 }
 
-// Fetch category data
-$stmt = $dbh->prepare("SELECT * FROM tblcategory WHERE id = ?");
+// Fetch supplier data
+$stmt = $dbh->prepare("SELECT * FROM tblsuppliers WHERE id = ?");
 $stmt->execute([$id]);
 $result = $stmt->fetch(PDO::FETCH_OBJ);
 
 if (!$result) {
-    $_SESSION['admin_error'] = 'ไม่พบหมวดหมู่';
-    header('location:manage-categories.php');
+    $_SESSION['admin_error'] = 'ไม่พบผู้รับผิดชอบ';
+    header('location:manage-suppliers.php');
     exit;
 }
 ?>
@@ -54,7 +54,7 @@ if (!$result) {
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>E-Sports | Edit Category</title>
+    <title>E-Sports | Edit Supplier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="assets/css/font-awesome.css" rel="stylesheet" />
     <link href="assets/css/style.css" rel="stylesheet" />
@@ -67,28 +67,28 @@ if (!$result) {
         <div class="container">
             <div class="row pad-botm">
                 <div class="col-md-12">
-                    <h4 class="header-line">แก้ไขหมวดหมู่</h4>
+                    <h4 class="header-line">แก้ไขผู้รับผิดชอบ</h4>
                 </div>
             </div>
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-primary text-white">รายละเอียดหมวดหมู่</div>
+                        <div class="card-header bg-primary text-white">รายละเอียดผู้รับผิดชอบ</div>
                         <div class="card-body">
                             <form class="row g-3" role="form" method="post" novalidate>
                                 <div class="col-md-6">
-                                    <label class="form-label">ชื่อหมวดหมู่<span style="color:red;">*</span></label>
-                                    <input class="form-control" type="text" name="CategoryName" value="<?php echo htmlentities($result->CategoryName);?>" required />
+                                    <label class="form-label">ชื่อผู้รับผิดชอบ<span style="color:red;">*</span></label>
+                                    <input class="form-control" type="text" name="SupplierName" value="<?php echo htmlentities($result->SupplierName);?>" required />
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">สถานะ<span style="color:red;">*</span></label>
                                     <select class="form-select" name="Status" required>
-                                        <option value="1" <?php echo ($result->Status == 1) ? 'selected' : ''; ?>>พร้อมใช้งาน</option>
-                                        <option value="0" <?php echo ($result->Status == 0) ? 'selected' : ''; ?>>ไม่พร้อมใช้งาน</option>
+                                        <option value="1" <?php echo (isset($result->Status) && $result->Status == 1) ? 'selected' : ''; ?>>พร้อมใช้งาน</option>
+                                        <option value="0" <?php echo (isset($result->Status) && $result->Status == 0) ? 'selected' : ''; ?>>ไม่พร้อมใช้งาน</option>
                                     </select>
                                 </div>
                                 <div class="col-12 d-flex gap-2 mt-3" style="gap: 0.5rem !important;">
-                                    <a href="manage-categories.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
+                                    <a href="manage-suppliers.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> ย้อนกลับ</a>
                                     <button type="submit" name="update" class="btn btn-success"><i class="fa fa-save"></i> บันทึกการแก้ไข</button>
                                 </div>
                             </form>
@@ -187,7 +187,7 @@ if (!$result) {
                         var successModal = new bootstrap.Modal(document.getElementById('successModal'));
                         successModal.show();
                         $('#successModal').on('hidden.bs.modal', function () {
-                            window.location.href = 'manage-categories.php';
+                            window.location.href = 'manage-suppliers.php';
                         });
                     } else {
                         var msg = (resp && resp.error) ? resp.error : 'เกิดข้อผิดพลาด';

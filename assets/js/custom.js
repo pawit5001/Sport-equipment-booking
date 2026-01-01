@@ -13,17 +13,16 @@
 (function ($) {
     "use strict";
     var mainApp = {
-        slide_fun: function () {
-
-            $('#carousel-example').carousel({
-                interval:3000 // THIS TIME IS IN MILLI SECONDS
-            })
-
-        },
         dataTable_fun: function () {
-
-            $('#dataTables-example').dataTable();
-
+            // Only initialize DataTables if element exists and library is loaded
+            if ($('#dataTables-example').length > 0 && typeof $.fn.dataTable !== 'undefined') {
+                $('#dataTables-example').dataTable({
+                    "drawCallback": function() {
+                        // Prevent DataTables from interfering with dropdowns
+                        $('.dropdown-toggle').off('click.bs.dropdown');
+                    }
+                });
+            }
         },
        
         custom_fun:function()
@@ -41,7 +40,6 @@
    
    
     $(document).ready(function () {
-        mainApp.slide_fun();
         mainApp.dataTable_fun();
         mainApp.custom_fun();
     });

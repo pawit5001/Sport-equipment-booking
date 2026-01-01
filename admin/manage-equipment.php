@@ -2,9 +2,9 @@
 header('Content-Type: text/html; charset=UTF-8');
 session_start();
 error_reporting(0);
-require_once('includes/config.php');
-
+include('includes/config.php');
 if (strlen($_SESSION['alogin']) == 0) {
+    // If called via AJAX, return JSON instead of redirect so client can handle it gracefully
     $isAjaxAuth = (isset($_POST['ajax']) && $_POST['ajax'] == '1') ||
                   (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
     if ($isAjaxAuth) {
@@ -25,92 +25,84 @@ if (strlen($_SESSION['alogin']) == 0) {
             $ids = $_POST['selected_ids'];
         } elseif (isset($_POST['selected_ids']) && $_POST['selected_ids'] !== '') {
             $ids = [$_POST['selected_ids']];
-        } elseif (isset($_POST['selected_ids[]'])) {
+        } elseif (isset($_POST['selected_ids']) === false && isset($_POST['selected_ids__'])) {
+            $ids = (array)$_POST['selected_ids__'];
+        } elseif (isset($_POST['selected_ids']) === false && isset($_POST['selected_ids_'])) {
+            $ids = (array)$_POST['selected_ids_'];
+        } elseif (isset($_POST['selected_ids']) === false && isset($_POST['selected_ids[]'])) {
             $ids = (array)$_POST['selected_ids[]'];
         }
+        // Normalize IDs
         $ids = array_values(array_filter(array_map('trim', (array)$ids), function($v){ return $v !== '' && $v !== null; }));
 
         if (count($ids) === 0) {
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => false, 'error' => 'กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ']);
+                echo json_encode(['ok' => false, 'error' => 'กรุณาเลือกอุปกรณ์อย่างน้อย 1 รายการ']);
                 exit;
             } else {
-                $_SESSION['admin_error'] = "กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ";
-                header('location:manage-categories.php');
+                $_SESSION['admin_error'] = "กรุณาเลือกอุปกรณ์อย่างน้อย 1 รายการ";
+                header('location:manage-equipment.php');
                 exit;
             }
         }
         try {
             $dbh->beginTransaction();
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            // Delete dependent pricing rows first to satisfy FK
+            $pricingStmt = $dbh->prepare("DELETE FROM tblequipment_pricing WHERE EquipmentId IN ($placeholders)");
+            $pricingStmt->execute($ids);
 
-            // Prevent FK violation: block delete if equipment still links to these categories
-            $check = $dbh->prepare("SELECT COUNT(*) AS cnt FROM tblequipment WHERE CatId IN ($placeholders)");
-            $check->execute($ids);
-            $refCount = (int) $check->fetchColumn();
-            if ($refCount > 0) {
-                $dbh->rollBack();
-                if ($isAjax) {
-                    header('Content-Type: application/json; charset=UTF-8');
-                    echo json_encode(['ok' => false, 'error' => 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับหมวดหมู่ (' . $refCount . ' รายการ)']);
-                } else {
-                    $_SESSION['admin_error'] = 'ลบไม่ได้: มีอุปกรณ์เชื่อมกับหมวดหมู่ (' . $refCount . ' รายการ)';
-                    header('location:manage-categories.php');
-                }
-                exit;
-            }
-
-            $stmt = $dbh->prepare("DELETE FROM tblcategory WHERE id IN ($placeholders)");
+            $stmt = $dbh->prepare("DELETE FROM tblequipment WHERE id IN ($placeholders)");
             $stmt->execute($ids);
             $deleted = $stmt->rowCount();
             $dbh->commit();
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => true, 'msg' => 'ลบหมวดหมู่ที่เลือกสำเร็จ']);
+                echo json_encode(['ok' => true, 'deleted' => $deleted]);
                 exit;
             } else {
-                $_SESSION['admin_msg'] = "ลบหมวดหมู่ที่เลือกสำเร็จ";
-                header('location:manage-categories.php');
+                $_SESSION['delmsg'] = "ลบอุปกรณ์ที่เลือกสำเร็จ";
+                header('location:manage-equipment.php');
                 exit;
             }
         } catch (Exception $ex) {
             if ($dbh->inTransaction()) { $dbh->rollBack(); }
             $friendly = 'เกิดข้อผิดพลาดในการลบ';
-            error_log('[manage-categories] delete failed: ' . $ex->getMessage());
+            // Foreign key constraint violation (e.g., still referenced by bookings/issued records)
+            if ($ex->getCode() === '23000') {
+                $friendly = 'ลบไม่ได้: มีการอ้างอิงอุปกรณ์นี้อยู่ (เช่น การจอง/ประวัติการยืม)';
+            }
+            error_log('[manage-equipment] delete failed: ' . $ex->getMessage());
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => false, 'error' => $friendly]);
+                echo json_encode([
+                    'ok' => false,
+                    'error' => $friendly,
+                    'detail' => $ex->getMessage(),
+                ]);
                 exit;
             } else {
                 $_SESSION['admin_error'] = $friendly;
-                header('location:manage-categories.php');
+                header('location:manage-equipment.php');
                 exit;
             }
         }
     }
 }
 
+// Capture page-level error to display in modal (cleared after read)
 $pageError = '';
 if (!empty($_SESSION['admin_error'])) {
     $pageError = $_SESSION['admin_error'];
     $_SESSION['admin_error'] = "";
 }
 
+// Capture page-level success to display in modal (cleared after read)
 $pageSuccess = '';
 if (!empty($_SESSION['admin_msg'])) {
     $pageSuccess = $_SESSION['admin_msg'];
     $_SESSION['admin_msg'] = "";
-}
-
-// Fetch all categories (include updated date)
-try {
-    $result = $dbh->query("SELECT id, CategoryName, Status, CreationDate AS CreatedDate, UpdationDate AS UpdatedDate FROM tblcategory ORDER BY id DESC");
-    $categories = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
-} catch (Exception $ex) {
-    // Fallback if UpdationDate column is missing
-    $result = $dbh->query("SELECT id, CategoryName, Status, CreationDate AS CreatedDate FROM tblcategory ORDER BY id DESC");
-    $categories = $result ? $result->fetchAll(PDO::FETCH_OBJ) : [];
 }
 ?>
 
@@ -121,7 +113,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>E-Sports | Manage Categories</title>
+    <title>E-Sports | Manage Equipment</title>
     <!-- BOOTSTRAP CORE STYLE  -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FONT AWESOME STYLE  -->
@@ -144,7 +136,7 @@ try {
         <div class="container">
             <div class="row pad-botm">
                 <div class="col-md-12">
-                    <h4 class="header-line">จัดการหมวดหมู่</h4>
+                    <h4 class="header-line">จัดการอุปกรณ์กีฬา</h4>
                 </div>
             </div>
             <div class="row">
@@ -169,7 +161,9 @@ try {
                                         <thead>
                                             <tr>
                                                 <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAll" title="เลือกทั้งหมด" /></th>
-                                                <th>ชื่อหมวดหมู่</th>
+                                                <th>ชื่ออุปกรณ์กีฬา</th>
+                                                <th>หมวดหมู่</th>
+                                                <th>จำนวนคงเหลือ</th>
                                                 <th class="status-col">สถานะ</th>
                                                 <th>วันที่เพิ่ม</th>
                                                 <th>อัปเดตล่าสุด</th>
@@ -177,28 +171,51 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php if(!empty($categories)) {
-                                                foreach($categories as $row) { ?>
+                                            <?php 
+                                                    $sql = "SELECT 
+                                                                e.EquipmentName, 
+                                                                e.EquipmentCode, 
+                                                                e.IsActive, 
+                                                                c.CategoryName, 
+                                                                s.SupplierName, 
+                                                                e.Quantity, 
+                                                                e.id as bookid,
+                                                                COALESCE(e.CreatedAt, e.RegDate) AS CreatedDate,
+                                                                COALESCE(e.UpdatedAt, e.UpdationDate) AS UpdatedDate
+                                                            FROM tblequipment e
+                                                            LEFT JOIN tblcategory c ON c.id = e.CatId
+                                                            LEFT JOIN tblsuppliers s ON s.id = e.SupplierId";
+                                                $query = $dbh->prepare($sql);
+                                                $query->execute();
+                                                $results = $query->fetchAll(PDO::FETCH_OBJ);
+                                                if($query->rowCount() > 0) {
+                                                    foreach($results as $result) {
+                                            ?>                                      
                                             <tr class="odd gradeX">
-                                                <td class="center" style="text-align:center;"><input type="checkbox" name="selected_ids[]" value="<?php echo htmlentities($row->id);?>" /></td>
+                                                <td class="center" style="text-align:center;"><input type="checkbox" name="selected_ids[]" value="<?php echo htmlentities($result->bookid);?>" /></td>
                                                 <td class="center">
-                                                    <div style="font-weight:600;"><?php echo htmlentities($row->CategoryName);?></div>
+                                                    <div style="font-weight:600;"><?php echo htmlentities($result->EquipmentName);?></div>
+                                                    <small class="text-muted">รหัส: <?php echo htmlentities($result->EquipmentCode);?> • ผู้รับผิดชอบ: <?php echo htmlentities($result->SupplierName);?></small>
+                                                </td>
+                                                <td class="center"><?php echo htmlentities($result->CategoryName);?></td>
+                                                <td class="center">
+                                                    <?php echo htmlentities($result->Quantity);?>
                                                 </td>
                                                 <td class="center status-col">
-                                                    <?php if ((int)$row->Status === 1) { ?>
-                                                        <span class="badge status-badge bg-success">พร้อมใช้งาน</span>
+                                                    <?php if ((int)$result->IsActive === 1) { ?>
+                                                        <span class="badge status-badge bg-success">พร้อมให้ยืม</span>
                                                     <?php } else { ?>
-                                                        <span class="badge status-badge bg-secondary">ไม่พร้อมใช้งาน</span>
+                                                        <span class="badge status-badge bg-secondary">ปิดการยืม</span>
                                                     <?php } ?>
                                                 </td>
                                                 <td class="center">
-                                                    <?php echo htmlentities(date('d-m-Y H:i:s', strtotime($row->CreatedDate)));?>
+                                                    <?php echo !empty($result->CreatedDate) ? htmlentities(date('d-m-Y H:i:s', strtotime($result->CreatedDate))) : '-'; ?>
                                                 </td>
                                                 <td class="center">
-                                                    <?php echo !empty($row->UpdatedDate) ? htmlentities(date('d-m-Y H:i:s', strtotime($row->UpdatedDate))) : '-'; ?>
+                                                    <?php echo !empty($result->UpdatedDate) ? htmlentities(date('d-m-Y H:i:s', strtotime($result->UpdatedDate))) : '-'; ?>
                                                 </td>
                                                 <td class="center">
-                                                    <a href="edit-category.php?id=<?php echo htmlentities($row->id);?>" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i> แก้ไข</a>
+                                                    <a href="edit-equipment.php?bookid=<?php echo htmlentities($result->bookid);?>" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i> แก้ไข</a>
                                                 </td>
                                             </tr>
                                             <?php }} ?>                                      
@@ -274,14 +291,22 @@ try {
                     <div class="modal-body" id="confirmDeleteBody">คุณแน่ใจหรือว่าต้องการลบรายการที่เลือก?</div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" data-confirm-btn="delete">ลบ</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">ลบ</button>
                     </div>
                 </div>
             </div>
         </div>
 
     <script>
+    // Debug logging for F12 console
+    // Commented out - remove debug logs
+    // console.log('=== Manage Equipment Page Loaded ===');
+    // console.log('jQuery version:', typeof jQuery !== 'undefined' ? jQuery.fn.jquery : 'Not loaded');
+    // console.log('Bootstrap version:', typeof bootstrap !== 'undefined' ? '5.3.0+' : 'Not loaded');
+    // console.log('DataTables loaded:', typeof $.fn.dataTable !== 'undefined');
+    
     $(document).ready(function() {
+        // Show success modal if there is a page-level success message (prevent duplicate)
         var pageSuccess = <?php echo json_encode($pageSuccess); ?>;
         
         if (pageSuccess && !sessionStorage.getItem('modalShown')) {
@@ -295,8 +320,10 @@ try {
                     keyboard: true
                 });
                 
+                // Show modal once
                 successModal.show();
                 
+                // Clear sessionStorage when modal closes
                 successModalEl.addEventListener('hidden.bs.modal', function(e) {
                     sessionStorage.removeItem('modalShown');
                     if (document.activeElement) {
@@ -307,10 +334,12 @@ try {
             }
         }
         
+        // Clear sessionStorage on page load if no success message (page refresh)
         if (!pageSuccess) {
             sessionStorage.removeItem('modalShown');
         }
 
+        // Show modal if there is a page-level error
         var pageError = <?php echo json_encode($pageError); ?>;
         if (pageError) {
             var modalEl = document.getElementById('feedbackModal');
@@ -323,130 +352,106 @@ try {
             }
         }
 
-        var $ = window.jQuery;
+        // Log clicks on edit buttons
+        $('a[href*="edit-equipment.php"]').on('click', function(e) {
+            // console.log('Edit button clicked:', $(this).attr('href'));
+        });
         
+        // Log clicks on delete buttons
+        $('a[href*="del="]').on('click', function(e) {
+            // console.log('Delete button clicked:', $(this).attr('href'));
+        });
+
         function updateSelectionState() {
             const count = $('input[name="selected_ids[]"]:checked').length;
             $('#selectedCount').text('เลือกแล้ว ' + count + ' รายการ');
             $('#bulkDeleteBtn').prop('disabled', count === 0);
         }
 
+        // Select/Deselect all
         $('#selectAll').on('change', function() {
             const checked = $(this).is(':checked');
             $('input[name="selected_ids[]"]').prop('checked', checked);
             updateSelectionState();
         });
 
+        // Per-row checkbox change updates state
         $(document).on('change', 'input[name="selected_ids[]"]', function() {
+            // If any unchecked while selectAll is checked, uncheck header
             if (!$(this).is(':checked')) {
                 $('#selectAll').prop('checked', false);
             }
             updateSelectionState();
         });
 
-        $('#bulkDeleteBtn').on('click', function(e) {
-            e.preventDefault();
-            var selected = [];
-            $('input[name="selected_ids[]"]:checked').each(function() {
-                selected.push($(this).val());
-            });
+        // Debug: Check computed styles for alignment issues
+        // Commented out - remove debug logs
+        /*
+        setTimeout(function() {
+            var badge = document.getElementById('selectedCount');
+            var btn = document.getElementById('bulkDeleteBtn');
             
-            if (selected.length === 0) {
-                alert('No items selected');
-                return;
+            if (badge) {
+                var badgeStyles = window.getComputedStyle(badge);
+                console.log('=== Badge (#selectedCount) Computed Styles ===');
+                console.log('display:', badgeStyles.display);
+                console.log('align-items:', badgeStyles.alignItems);
+                console.log('justify-content:', badgeStyles.justifyContent);
+                console.log('text-align:', badgeStyles.textAlign);
+                console.log('line-height:', badgeStyles.lineHeight);
+                console.log('vertical-align:', badgeStyles.verticalAlign);
+                console.log('padding:', badgeStyles.padding);
+                console.log('height:', badgeStyles.height);
             }
             
-            window.pendingDeleteIds = selected;
-            var confirmModalEl = document.getElementById('confirmDeleteModal');
-            if (confirmModalEl) {
-                var confirmModal = new bootstrap.Modal(confirmModalEl);
-                confirmModal.show();
+            if (btn) {
+                var btnStyles = window.getComputedStyle(btn);
+                console.log('=== Button (#bulkDeleteBtn) Computed Styles ===');
+                console.log('display:', btnStyles.display);
+                console.log('align-items:', btnStyles.alignItems);
+                console.log('justify-content:', btnStyles.justifyContent);
+                console.log('text-align:', btnStyles.textAlign);
+                console.log('line-height:', btnStyles.lineHeight);
+                console.log('vertical-align:', btnStyles.verticalAlign);
+                console.log('padding:', btnStyles.padding);
+                console.log('height:', btnStyles.height);
             }
-        });
-
-        var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.addEventListener('click', function() {
-                if (window.pendingDeleteIds && window.pendingDeleteIds.length > 0) {
-                    $.ajax({
-                        type: 'POST',
-                        url: window.location.href,
-                        data: { 'selected_ids[]': window.pendingDeleteIds, 'bulk_delete': '1', 'ajax': '1' },
-                        traditional: true,
-                        timeout: 20000,
-                        dataType: 'json',
-                        success: function(response) {
-                            var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
-                            if (confirmModal) confirmModal.hide();
-                            
-                            if (response.ok) {
-                                var successModalEl = document.getElementById('successModal');
-                                if (successModalEl) {
-                                    successModalEl.querySelector('#successModalBody').textContent = response.msg || 'Deleted successfully';
-                                    var successModal = new bootstrap.Modal(successModalEl);
-                                    successModal.show();
-                                    
-                                    successModalEl.addEventListener('hidden.bs.modal', function(e) {
-                                        window.location.reload();
-                                    }, { once: true });
-                                }
-                            } else {
-                                var errorModalEl = document.getElementById('feedbackModal');
-                                if (errorModalEl) {
-                                    errorModalEl.querySelector('#feedbackModalBody').textContent = response.error || response.msg || 'An error occurred';
-                                    var errorModal = new bootstrap.Modal(errorModalEl);
-                                    errorModal.show();
-                                }
-                            }
-                        },
-                        error: function(xhr) {
-                            var errorModalEl = document.getElementById('feedbackModal');
-                            if (errorModalEl) {
-                                var errorMsg = 'An error occurred';
-                                if (xhr.responseJSON && xhr.responseJSON.error) {
-                                    errorMsg = xhr.responseJSON.error;
-                                }
-                                errorModalEl.querySelector('#feedbackModalBody').textContent = errorMsg;
-                                var errorModal = new bootstrap.Modal(errorModalEl);
-                                errorModal.show();
-                            }
-                        }
-                    });
-                }
+            
+            // Check pagination buttons
+            var paginateBtn = document.querySelector('.dataTables_paginate .paginate_button');
+            if (paginateBtn) {
+                var paginateStyles = window.getComputedStyle(paginateBtn);
+                console.log('=== Pagination Button Computed Styles ===');
+                console.log('display:', paginateStyles.display);
+                console.log('text-align:', paginateStyles.textAlign);
+                console.log('line-height:', paginateStyles.lineHeight);
+                console.log('vertical-align:', paginateStyles.verticalAlign);
+                console.log('padding:', paginateStyles.padding);
+                console.log('align-items:', paginateStyles.alignItems);
+                console.log('justify-content:', paginateStyles.justifyContent);
+            }
+            
+            // Force pagination button alignment with JavaScript
+            $('.dataTables_paginate .paginate_button').each(function() {
+                $(this).css({
+                    'display': 'inline-flex',
+                    'align-items': 'center',
+                    'justify-content': 'center',
+                    'text-align': 'center',
+                    'line-height': '1'
+                });
             });
-        }
-
-        if ($.fn.DataTable.isDataTable('#dataTables-example')) {
-            return;
-        }
-        var table = $('#dataTables-example').dataTable({
-            oLanguage: {
-                sSearch: 'ค้นหา:',
-                sLengthMenu: 'แสดง _MENU_ รายการต่อหน้า',
-                sInfo: 'แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ',
-                sInfoEmpty: 'ไม่มีข้อมูลที่จะแสดง',
-                sInfoFiltered: '(กรองจากทั้งหมด _MAX_ รายการ)',
-                sZeroRecords: 'ไม่พบข้อมูลที่ตรงกัน',
-                oPaginate: { sPrevious: 'ก่อนหน้า', sNext: 'ถัดไป' }
-            },
-            columnDefs: [
-                { orderable: false, targets: [0, -1] }
-            ],
-            dom: "<'row align-items-center mb-2'<'col-sm-12 col-md-6'f><'col-sm-12 col-md-6 text-end'l>>t<'row align-items-center mt-2'<'col-sm-12 col-md-6'i><'col-sm-12 col-md-6 text-end'p>>"
-        });
+            
+            console.log('=== After JavaScript Fix ===');
+            if (paginateBtn) {
+                var afterStyles = window.getComputedStyle(paginateBtn);
+                console.log('align-items:', afterStyles.alignItems);
+                console.log('justify-content:', afterStyles.justifyContent);
+            }
+        }, 1000);
+        */
         
-        // Match equipment page control polish
-        var filterInput = document.querySelector('.dataTables_filter input');
-        if (filterInput) {
-            filterInput.classList.add('form-control', 'form-control-sm');
-            filterInput.placeholder = 'พิมพ์คำค้น...';
-        }
-        var lengthSelect = document.querySelector('.dataTables_length select');
-        if (lengthSelect) {
-            lengthSelect.classList.add('form-select', 'form-select-sm');
-        }
-
-        // Force pagination buttons to inline-flex like equipment page
+        // Force pagination button alignment (without console logs)
         setTimeout(function() {
             $('.dataTables_paginate .paginate_button').each(function() {
                 $(this).css({
@@ -458,11 +463,105 @@ try {
                 });
             });
         }, 1000);
+        var pendingDeleteIds = [];
+        var confirmModalEl = document.getElementById('confirmDeleteModal');
+        var confirmModal = confirmModalEl ? new bootstrap.Modal(confirmModalEl) : null;
+
+        $('#bulkDeleteForm').on('submit', function(e) {
+            e.preventDefault();
+            console.log('Bulk delete submit intercepted');
+            const checked = $('input[name="selected_ids[]"]:checked');
+            const count = checked.length;
+            if (count === 0) {
+                if (window.showToast) window.showToast('กรุณาเลือกรายการที่จะลบ', 'danger');
+                return false;
+            }
+
+            pendingDeleteIds = checked.map(function(){ return $(this).val(); }).get();
+            $('#confirmDeleteBody').text('คุณแน่ใจหรือว่าต้องการลบ ' + count + ' รายการที่เลือก?');
+            if (confirmModal) {
+                console.log('Opening confirm modal');
+                confirmModal.show();
+            }
+        });
+
+        $('#confirmDeleteBtn').on('click', function() {
+            var checked = $('input[name="selected_ids[]"]:checked');
+            if (pendingDeleteIds.length === 0) {
+                if (window.showToast) window.showToast('กรุณาเลือกรายการที่จะลบ', 'danger');
+                return;
+            }
+            // Prevent focus from remaining on a soon-to-be-hidden element
+            $('#confirmDeleteBtn').blur();
+            if (confirmModal) confirmModal.hide();
+            performBulkDelete(pendingDeleteIds, checked);
+        });
+
+        // After modal hides, return focus to the bulk delete button
+        if (confirmModalEl) {
+            confirmModalEl.addEventListener('hidden.bs.modal', function() {
+                var bulkBtn = document.getElementById('bulkDeleteBtn');
+                if (bulkBtn) bulkBtn.focus();
+            });
+        }
+
+        function performBulkDelete(ids, checked) {
+            const $btn = $('#bulkDeleteBtn');
+            $btn.prop('disabled', true).addClass('disabled').html('<i class="fa fa-spinner fa-spin me-1"></i> กำลังลบ...');
+
+            console.log('Bulk delete sending ids:', ids);
+            $.ajax({
+                url: 'manage-equipment.php',
+                method: 'POST',
+                dataType: 'json',
+                traditional: true,
+                timeout: 20000,
+                data: { bulk_delete: 1, ajax: 1, 'selected_ids[]': ids },
+                success: function(res) {
+                    if (res && res.ok) {
+                        var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#dataTables-example') ? $('#dataTables-example').DataTable() : null;
+                        checked.each(function(){
+                            var $row = $(this).closest('tr');
+                            if (dt) dt.row($row).remove(); else $row.remove();
+                        });
+                        if (dt) dt.draw(false);
+                        if (window.showToast) window.showToast('ลบสำเร็จ ' + res.deleted + ' รายการ', 'success');
+                        // Reset selection state
+                        $('#selectAll').prop('checked', false);
+                        updateSelectionState();
+                    } else if (res && res.error === 'auth') {
+                        if (window.showToast) window.showToast('เซสชันหมดเวลา โปรดเข้าสู่ระบบใหม่', 'warning');
+                        window.location.href = '../adminlogin.php';
+                    } else {
+                        console.error('Bulk delete failed response:', res);
+                        var msg = (res && res.error) ? res.error : 'เกิดข้อผิดพลาดระหว่างการลบ';
+                        if (res && res.detail) {
+                            msg += ' (' + res.detail + ')';
+                        }
+                        if (window.showToast) window.showToast(msg, 'danger');
+                        else alert(msg);
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Bulk delete AJAX error', {
+                        status: jqXHR.status,
+                        textStatus: textStatus,
+                        error: errorThrown,
+                        response: jqXHR.responseText
+                    });
+                    if (window.showToast) window.showToast('เครือข่ายผิดพลาด ลบไม่สำเร็จ', 'danger');
+                },
+                complete: function() {
+                    $btn.removeClass('disabled').html('<i class="fa fa-trash me-1"></i> ลบที่เลือก');
+                    updateSelectionState();
+                    pendingDeleteIds = [];
+                }
+            });
+        }
     });
     </script>
-
     <style>
-    /* Match equipment page layout and controls */
+    /* Admin page overrides to avoid conflicts with modern-style.css */
     .content-wrapper { margin-top: 40px !important; min-height: auto !important; display: block !important; padding: 0 !important; }
     .container { max-width: 1140px; }
     /* Table UX tweaks */
@@ -487,8 +586,10 @@ try {
         white-space: nowrap;
     }
     .dataTables_wrapper .dataTables_filter input { width: 280px; }
+    
     /* Table spacing */
     #dataTables-example { margin-top: 1.5rem !important; }
+    
     /* Bulk delete toolbar */
     #selectedCount {
         display: inline-flex !important;
@@ -518,10 +619,12 @@ try {
         padding: 0 !important;
     }
     .btn-delete:disabled { opacity: .6; cursor: not-allowed; }
+    
     /* Footer positioning */
     body { min-height: 100vh; display: flex; flex-direction: column; }
     .content-wrapper { flex: 1; }
     .footer-section { margin-top: auto; }
+    
     /* Pagination buttons */
     .dataTables_paginate .paginate_button,
     .dataTables_paginate .paginate_button.previous,

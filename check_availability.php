@@ -1,65 +1,38 @@
 <?php 
 require_once("includes/config.php");
 
-// Code for checking email availability
-if(!empty($_POST["emailid"])) {
+// Code for checking email or StudentID availability
+$type = isset($_POST['type']) ? $_POST['type'] : '';
+
+if($type === 'email' && !empty($_POST["emailid"])) {
     $email = $_POST["emailid"];
     if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        echo "<span style='color:red'> รูปแบบอีเมลไม่ถูกต้อง! </span>";
+        echo "<span class='d-block mt-1' style='color: #ef4444; font-size: 0.85rem;'><i class='fa fa-exclamation-circle me-1'></i>รูปแบบอีเมลไม่ถูกต้อง</span>";
     } else {
-        $sql = "SELECT EmailId FROM tblstudents WHERE EmailId=:email";
+        $sql = "SELECT Email FROM tblmembers WHERE Email=:email";
         $query = $dbh->prepare($sql);
         $query->bindParam(':email', $email, PDO::PARAM_STR);
         $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_OBJ);
         if($query->rowCount() > 0) {
-            echo "<span style='color:red'> อีเมลนี้ถูกใช้ไปแล้ว </span>";
-            echo "<script>$('#submit').prop('disabled',true);</script>";
+            echo "<span class='d-block mt-1' style='color: #ef4444; font-size: 0.85rem;'><i class='fa fa-exclamation-circle me-1'></i>อีเมลนี้ถูกใช้ไปแล้ว</span>";
         } else {
-            echo "<span style='color:green'> อีเมลนี้สามารถใช้งานได้ </span>";
-            echo "<script>$('#submit').prop('disabled',false);</script>";
+            echo "<span class='d-block mt-1' style='color: #10b981; font-size: 0.85rem;'><i class='fa fa-check-circle me-1'></i>อีเมลนี้ใช้ได้</span>";
         }
     }
 }
-
-// Code for checking FullName availability
-if(!empty($_POST["fullname"])) {
-    $fullname = $_POST["fullname"];
-    if (!preg_match("/^[A-Za-z\s]+$/", $fullname)) {
-        echo "<span style='color:red'> รูปแบบชื่อ-นามสกุลไม่ถูกต้อง! </span>";
+elseif($type === 'studentid' && !empty($_POST["studentid"])) {
+    $studentid = $_POST["studentid"];
+    if (!preg_match("/^\d{12}-\d$/", $studentid)) {
+        echo "<span class='d-block mt-1' style='color: #ef4444; font-size: 0.85rem;'><i class='fa fa-exclamation-circle me-1'></i>รูปแบบรหัสนักศึกษาไม่ถูกต้อง (12 ตัวเลข-1 ตัวเลข)</span>";
     } else {
-        $sql = "SELECT FullName FROM tblstudents WHERE FullName=:fullname";
+        $sql = "SELECT StudentID FROM tblmembers WHERE StudentID=:studentid";
         $query = $dbh->prepare($sql);
-        $query->bindParam(':fullname', $fullname, PDO::PARAM_STR);
+        $query->bindParam(':studentid', $studentid, PDO::PARAM_STR);
         $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_OBJ);
         if($query->rowCount() > 0) {
-            echo "<span style='color:red'> ชื่อ-นามสกุลนี้ถูกใช้ไปแล้ว </span>";
-            echo "<script>$('#submit').prop('disabled',true);</script>";
+            echo "<span class='d-block mt-1' style='color: #ef4444; font-size: 0.85rem;'><i class='fa fa-exclamation-circle me-1'></i>รหัสนักศึกษานี้ถูกใช้ไปแล้ว</span>";
         } else {
-            echo "<span style='color:green'> ชื่อ-นามสกุลนี้สามารถใช้งานได้ </span>";
-            echo "<script>$('#submit').prop('disabled',false);</script>";
-        }
-    }
-}
-
-// Code for checking MobileNumber availability
-if(!empty($_POST["mobileno"])) {
-    $mobileno = $_POST["mobileno"];
-    if (!preg_match("/^\d{10}-\d$/", $mobileno)) {
-        echo "<span style='color:red'> รูปแบบรหัสนักศึกษาไม่ถูกต้อง! </span>";
-    } else {
-        $sql = "SELECT MobileNumber FROM tblstudents WHERE MobileNumber=:mobileno";
-        $query = $dbh->prepare($sql);
-        $query->bindParam(':mobileno', $mobileno, PDO::PARAM_STR);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_OBJ);
-        if($query->rowCount() > 0) {
-            echo "<span style='color:red'> รหัสนักศึกษานี้ถูกใช้ไปแล้ว </span>";
-            echo "<script>$('#submit').prop('disabled',true);</script>";
-        } else {
-            echo "<span style='color:green'> รหัสนักศึกษานี้สามารถใช้งานได้ </span>";
-            echo "<script>$('#submit').prop('disabled',false);</script>";
+            echo "<span class='d-block mt-1' style='color: #10b981; font-size: 0.85rem;'><i class='fa fa-check-circle me-1'></i>รหัสนักศึกษานี้ใช้ได้</span>";
         }
     }
 }
