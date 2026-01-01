@@ -1,6 +1,6 @@
-# 🏀 ระบบยืม-คืนอุปกรณ์กีฬา (Sport Equipment Booking System)
+# 🏀 Sport Equipment Booking System
 
-ระบบจัดการยืม-คืนอุปกรณ์กีฬาสำหรับสถาบันการศึกษา พัฒนาด้วย PHP และ MySQL
+A web-based sport equipment borrowing and return management system for educational institutions. Built with PHP and MySQL.
 
 ![PHP](https://img.shields.io/badge/PHP-7.4+-777BB4?style=flat-square&logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7+-4479A1?style=flat-square&logo=mysql&logoColor=white)
@@ -8,105 +8,105 @@
 
 ---
 
-## 📋 สารบัญ
+## 📋 Table of Contents
 
-- [คุณสมบัติของระบบ](#-คุณสมบัติของระบบ)
-- [ความต้องการของระบบ](#-ความต้องการของระบบ)
-- [การติดตั้ง](#-การติดตั้ง)
-- [โครงสร้างฐานข้อมูล](#-โครงสร้างฐานข้อมูล)
-- [การใช้งาน](#-การใช้งาน)
-- [โครงสร้างไฟล์](#-โครงสร้างไฟล์)
-
----
-
-## ✨ คุณสมบัติของระบบ
-
-### 👤 สำหรับนักศึกษา (User)
-- ✅ สมัครสมาชิกและเข้าสู่ระบบ
-- ✅ ดูรายการอุปกรณ์กีฬาที่พร้อมให้ยืม
-- ✅ เพิ่มอุปกรณ์ลงตะกร้า
-- ✅ ทำรายการยืมอุปกรณ์
-- ✅ ดูประวัติการยืม-คืน
-- ✅ พิมพ์ใบเสร็จการยืม
-- ✅ เปลี่ยนรหัสผ่าน / แก้ไขโปรไฟล์
-
-### 👨‍💼 สำหรับผู้ดูแลระบบ (Admin)
-- ✅ จัดการหมวดหมู่อุปกรณ์ (เพิ่ม/แก้ไข/ลบ)
-- ✅ จัดการอุปกรณ์กีฬา (เพิ่ม/แก้ไข/ลบ)
-- ✅ จัดการผู้จัดจำหน่าย (Suppliers)
-- ✅ จัดการข้อมูลนักศึกษา
-- ✅ ดูรายการยืมทั้งหมด
-- ✅ บันทึกการคืนอุปกรณ์
-- ✅ ตั้งค่าระบบ (จำนวนวันยืมสูงสุด, ค่าปรับ)
-- ✅ ดู Dashboard สถิติต่างๆ
-- ✅ พิมพ์ใบเสร็จการยืม
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Database Schema](#-database-schema)
+- [Usage Guide](#-usage-guide)
+- [Project Structure](#-project-structure)
 
 ---
 
-## 💻 ความต้องการของระบบ
+## ✨ Features
 
-| รายการ | เวอร์ชันขั้นต่ำ |
-|--------|----------------|
-| PHP | 7.4 หรือสูงกว่า |
-| MySQL | 5.7 หรือสูงกว่า |
-| Web Server | Apache (แนะนำ XAMPP) |
+### 👤 For Students (User)
+- ✅ Register and login
+- ✅ Browse available sport equipment
+- ✅ Add equipment to cart
+- ✅ Book equipment
+- ✅ View booking history
+- ✅ Print booking receipt
+- ✅ Change password / Edit profile
+
+### 👨‍💼 For Administrator (Admin)
+- ✅ Manage equipment categories (Add/Edit/Delete)
+- ✅ Manage sport equipment (Add/Edit/Delete)
+- ✅ Manage suppliers
+- ✅ Manage student data
+- ✅ View all bookings
+- ✅ Record equipment returns
+- ✅ System settings (Max booking days, late fees)
+- ✅ Dashboard with statistics
+- ✅ Print booking receipts
+
+---
+
+## 💻 Requirements
+
+| Item | Minimum Version |
+|------|-----------------|
+| PHP | 7.4 or higher |
+| MySQL | 5.7 or higher |
+| Web Server | Apache (XAMPP recommended) |
 | Browser | Chrome, Firefox, Edge |
 
 ---
 
-## 🚀 การติดตั้ง
+## 🚀 Installation
 
-### ขั้นตอนที่ 1: ติดตั้ง XAMPP
-ดาวน์โหลดและติดตั้ง [XAMPP](https://www.apachefriends.org/download.html)
+### Step 1: Install XAMPP
+Download and install [XAMPP](https://www.apachefriends.org/download.html)
 
-### ขั้นตอนที่ 2: Clone โปรเจค
+### Step 2: Clone the Project
 ```bash
 cd C:\xampp\htdocs
 git clone https://github.com/pawit5001/Sport-equipment-booking.git
 ```
 
-### ขั้นตอนที่ 3: สร้างฐานข้อมูล
-1. เปิด phpMyAdmin: http://localhost/phpmyadmin
-2. สร้างฐานข้อมูลใหม่ชื่อ `sports_equipment_booking`
-3. Import ไฟล์ SQL (ถ้ามี) หรือสร้าง tables ตาม [โครงสร้างฐานข้อมูล](#-โครงสร้างฐานข้อมูล)
+### Step 3: Create Database
+1. Open phpMyAdmin: http://localhost/phpmyadmin
+2. Create a new database named `sports_equipment_booking`
+3. Import SQL file (if available) or create tables according to [Database Schema](#-database-schema)
 
-### ขั้นตอนที่ 4: ตั้งค่าการเชื่อมต่อฐานข้อมูล
-แก้ไขไฟล์ `includes/config.php`:
+### Step 4: Configure Database Connection
+Edit `includes/config.php`:
 ```php
 <?php
 $dbhost = "localhost";
-$dbuser = "root";        // ชื่อผู้ใช้ MySQL
-$dbpass = "";            // รหัสผ่าน MySQL (XAMPP ปกติเป็นค่าว่าง)
+$dbuser = "root";        // MySQL username
+$dbpass = "";            // MySQL password (XAMPP default is empty)
 $dbname = "sports_equipment_booking";
 ?>
 ```
 
-### ขั้นตอนที่ 5: เริ่มใช้งาน
-1. เปิด XAMPP Control Panel
-2. Start **Apache** และ **MySQL**
-3. เปิด Browser ไปที่: http://localhost/Sport-equipment-booking
+### Step 5: Start the Application
+1. Open XAMPP Control Panel
+2. Start **Apache** and **MySQL**
+3. Open Browser and go to: http://localhost/Sport-equipment-booking
 
 ---
 
-## 🗄️ โครงสร้างฐานข้อมูล
+## 🗄️ Database Schema
 
-### ตารางทั้งหมด (8 ตาราง)
+### All Tables (8 tables)
 
-| ตาราง | คำอธิบาย |
-|-------|---------|
-| `tblmembers` | ข้อมูลผู้ใช้งาน (นักศึกษา + แอดมิน) |
-| `tblcategory` | หมวดหมู่อุปกรณ์กีฬา |
-| `tblequipment` | ข้อมูลอุปกรณ์กีฬา |
-| `tblequipment_pricing` | ราคาค่ายืมอุปกรณ์ |
-| `tblsuppliers` | ข้อมูลผู้รับผิดชอบ |
-| `tblbookings` | รายการยืมอุปกรณ์ |
-| `tblbookingdetails` | รายละเอียดการยืม (อุปกรณ์แต่ละชิ้น) |
-| `tblbooking_settings` | ตั้งค่าระบบการยืม |
+| Table | Description |
+|-------|-------------|
+| `tblmembers` | User data (Students + Admin) |
+| `tblcategory` | Equipment categories |
+| `tblequipment` | Sport equipment data |
+| `tblequipment_pricing` | Equipment rental pricing |
+| `tblsuppliers` | Supplier/PIC information |
+| `tblbookings` | Booking records |
+| `tblbookingdetails` | Booking details (each item) |
+| `tblbooking_settings` | System settings |
 
-### SQL สร้างตาราง
+### SQL Create Tables
 
 ```sql
--- ตารางผู้ใช้งาน
+-- Users table
 CREATE TABLE tblmembers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     StudentID VARCHAR(20) NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE tblmembers (
     RegDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ตารางหมวดหมู่
+-- Categories table
 CREATE TABLE tblcategory (
     id INT AUTO_INCREMENT PRIMARY KEY,
     CategoryName VARCHAR(100) NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE tblcategory (
     CreationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ตารางอุปกรณ์
+-- Equipment table
 CREATE TABLE tblequipment (
     id INT AUTO_INCREMENT PRIMARY KEY,
     EquipmentName VARCHAR(100) NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE tblequipment (
     FOREIGN KEY (SupplierID) REFERENCES tblsuppliers(id)
 );
 
--- ตารางผู้จัดจำหน่าย
+-- Suppliers table
 CREATE TABLE tblsuppliers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     SupplierName VARCHAR(100) NOT NULL,
@@ -155,7 +155,7 @@ CREATE TABLE tblsuppliers (
     CreationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ตารางการยืม
+-- Bookings table
 CREATE TABLE tblbookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     BookingID VARCHAR(50) NOT NULL UNIQUE,
@@ -170,7 +170,7 @@ CREATE TABLE tblbookings (
     FOREIGN KEY (StudentID) REFERENCES tblmembers(id)
 );
 
--- ตารางรายละเอียดการยืม
+-- Booking details table
 CREATE TABLE tblbookingdetails (
     id INT AUTO_INCREMENT PRIMARY KEY,
     BookingID INT NOT NULL,
@@ -182,7 +182,7 @@ CREATE TABLE tblbookingdetails (
     FOREIGN KEY (EquipmentID) REFERENCES tblequipment(id)
 );
 
--- ตารางตั้งค่าการยืม
+-- Booking settings table
 CREATE TABLE tblbooking_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     max_booking_days INT DEFAULT 7,
@@ -191,153 +191,153 @@ CREATE TABLE tblbooking_settings (
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- เพิ่มตั้งค่าเริ่มต้น
+-- Insert default settings
 INSERT INTO tblbooking_settings (max_booking_days, late_fee_per_day, max_items_per_booking) 
 VALUES (7, 10.00, 5);
 
--- สร้าง Admin เริ่มต้น (รหัสผ่าน: admin123)
+-- Create default Admin (password: admin123)
 INSERT INTO tblmembers (StudentID, FullName, Email, Password, Role, Status) 
 VALUES ('ADMIN001', 'Administrator', 'admin@example.com', MD5('admin123'), 'admin', 'active');
 ```
 
 ---
 
-## 📖 การใช้งาน
+## 📖 Usage Guide
 
-### 🔐 เข้าสู่ระบบ
+### 🔐 Login
 
-#### สำหรับนักศึกษา
+#### For Students
 - URL: `http://localhost/Sport-equipment-booking/`
-- สมัครสมาชิกใหม่ หรือ เข้าสู่ระบบด้วย Email และรหัสผ่าน
+- Register a new account or login with Email and Password
 
-#### สำหรับผู้ดูแลระบบ
+#### For Administrator
 - URL: `http://localhost/Sport-equipment-booking/adminlogin.php`
 - Email: `admin@example.com`
 - Password: `admin123`
 
 ---
 
-### 👤 คู่มือสำหรับนักศึกษา
+### 👤 Student Guide
 
-#### 1. การยืมอุปกรณ์
-1. เข้าสู่ระบบ
-2. คลิก **"ยืมอุปกรณ์"** ในเมนู
-3. เลือกหมวดหมู่และอุปกรณ์ที่ต้องการ
-4. กำหนดจำนวนและคลิก **"เพิ่มลงตะกร้า"**
-5. ไปที่ตะกร้า → ตรวจสอบรายการ → คลิก **"ยืนยันการยืม"**
-6. เลือกวันที่ต้องการคืน → คลิก **"ส่งคำขอยืม"**
+#### 1. Borrowing Equipment
+1. Login to the system
+2. Click **"Book Equipment"** in the menu
+3. Select category and desired equipment
+4. Set quantity and click **"Add to Cart"**
+5. Go to Cart → Review items → Click **"Confirm Booking"**
+6. Select return date → Click **"Submit Booking"**
 
-#### 2. ดูประวัติการยืม
-1. คลิก **"การยืมของฉัน"** ในเมนู
-2. ดูสถานะการยืมทั้งหมด
-3. คลิก **"พิมพ์ใบเสร็จ"** เพื่อพิมพ์
+#### 2. View Booking History
+1. Click **"My Bookings"** in the menu
+2. View all booking status
+3. Click **"Print Receipt"** to print
 
-#### 3. แก้ไขโปรไฟล์
-1. คลิก **"โปรไฟล์"** ในเมนู
-2. แก้ไขข้อมูลส่วนตัว
-3. คลิก **"บันทึก"**
-
----
-
-### 👨‍💼 คู่มือสำหรับผู้ดูแลระบบ
-
-#### 1. จัดการหมวดหมู่
-- ไปที่ **จัดการหมวดหมู่** → เพิ่ม/แก้ไข/ลบหมวดหมู่
-
-#### 2. จัดการอุปกรณ์
-- ไปที่ **จัดการอุปกรณ์** → เพิ่มอุปกรณ์ใหม่
-- กรอกข้อมูล: ชื่อ, หมวดหมู่, จำนวน, รูปภาพ
-- สถานะ: พร้อมให้ยืม / ไม่พร้อม
-
-#### 3. ดูรายการยืม
-1. ไปที่ **จัดการการยืม**
-2. ดูรายการยืมทั้งหมด
-3. คลิก **"ดูรายละเอียด"** เพื่อดูข้อมูลการยืม
-
-#### 4. บันทึกการคืน
-1. ไปที่ **จัดการการยืม**
-2. เลือกรายการที่ต้องการบันทึกคืน
-3. คลิก **"บันทึกการคืน"**
-4. กรอกจำนวนที่คืน และสถานะ (ปกติ/ชำรุด/สูญหาย)
-
-#### 5. ตั้งค่าระบบ
-- ไปที่ **ตั้งค่าการยืม**
-- กำหนด: จำนวนวันยืมสูงสุด, ค่าปรับต่อวัน, จำนวนชิ้นต่อครั้ง
+#### 3. Edit Profile
+1. Click **"Profile"** in the menu
+2. Edit personal information
+3. Click **"Save"**
 
 ---
 
-## 📁 โครงสร้างไฟล์
+### 👨‍💼 Administrator Guide
+
+#### 1. Manage Categories
+- Go to **Manage Categories** → Add/Edit/Delete categories
+
+#### 2. Manage Equipment
+- Go to **Manage Equipment** → Add new equipment
+- Fill in: Name, Category, Quantity, Image
+- Status: Available / Unavailable
+
+#### 3. View Bookings
+1. Go to **Manage Bookings**
+2. View all booking records
+3. Click **"View Details"** to see booking information
+
+#### 4. Record Returns
+1. Go to **Manage Bookings**
+2. Select the booking to record return
+3. Click **"Record Return"**
+4. Enter returned quantity and status (Normal/Damaged/Lost)
+
+#### 5. System Settings
+- Go to **Booking Settings**
+- Configure: Max booking days, Late fee per day, Max items per booking
+
+---
+
+## 📁 Project Structure
 
 ```
 Sport-equipment-booking/
-├── index.php                    # หน้าแรก (Login)
-├── signup.php                   # สมัครสมาชิก
-├── adminlogin.php               # Login สำหรับ Admin
-├── dashboard.php                # หน้าหลักนักศึกษา
-├── book-equipment.php           # หน้ายืมอุปกรณ์
-├── booking-checkout.php         # หน้าตะกร้า/Checkout
-├── booking-confirmation.php     # หน้ายืนยันการยืม
-├── booking-receipt.php          # ใบเสร็จการยืม
-├── my-bookings.php              # ประวัติการยืม
-├── my-profile.php               # โปรไฟล์
-├── change-password.php          # เปลี่ยนรหัสผ่าน
-├── cart-actions.php             # API จัดการตะกร้า
-├── config.php                   # ไฟล์ config หลัก
+├── index.php                    # Home page (Login)
+├── signup.php                   # Registration
+├── adminlogin.php               # Admin Login
+├── dashboard.php                # Student Dashboard
+├── book-equipment.php           # Book Equipment page
+├── booking-checkout.php         # Cart/Checkout page
+├── booking-confirmation.php     # Booking Confirmation
+├── booking-receipt.php          # Booking Receipt
+├── my-bookings.php              # Booking History
+├── my-profile.php               # Profile
+├── change-password.php          # Change Password
+├── cart-actions.php             # Cart API
+├── config.php                   # Main config file
 │
-├── admin/                       # โฟลเดอร์ Admin
-│   ├── dashboard.php            # Dashboard Admin
-│   ├── add-equipment.php        # เพิ่มอุปกรณ์
-│   ├── edit-equipment.php       # แก้ไขอุปกรณ์
-│   ├── manage-equipment.php     # จัดการอุปกรณ์
-│   ├── add-category.php         # เพิ่มหมวดหมู่
-│   ├── manage-categories.php    # จัดการหมวดหมู่
-│   ├── add-supplier.php         # เพิ่มผู้จัดจำหน่าย
-│   ├── manage-suppliers.php     # จัดการผู้จัดจำหน่าย
-│   ├── manage-bookings.php      # จัดการการยืม
-│   ├── view-booking.php         # ดูรายละเอียดการยืม
-│   ├── return-booking.php       # บันทึกการคืน
-│   ├── booking-settings.php     # ตั้งค่าการยืม
-│   ├── reg-students.php         # จัดการนักศึกษา
-│   └── includes/                # Header/Footer Admin
+├── admin/                       # Admin folder
+│   ├── dashboard.php            # Admin Dashboard
+│   ├── add-equipment.php        # Add Equipment
+│   ├── edit-equipment.php       # Edit Equipment
+│   ├── manage-equipment.php     # Manage Equipment
+│   ├── add-category.php         # Add Category
+│   ├── manage-categories.php    # Manage Categories
+│   ├── add-supplier.php         # Add Supplier
+│   ├── manage-suppliers.php     # Manage Suppliers
+│   ├── manage-bookings.php      # Manage Bookings
+│   ├── view-booking.php         # View Booking Details
+│   ├── return-booking.php       # Record Return
+│   ├── booking-settings.php     # Booking Settings
+│   ├── reg-students.php         # Manage Students
+│   └── includes/                # Admin Header/Footer
 │
-├── includes/                    # Header/Footer User
+├── includes/                    # User Header/Footer
 │   ├── config.php
 │   ├── header.php
 │   └── footer.php
 │
-├── assets/                      # CSS/JS/Images User
+├── assets/                      # CSS/JS/Images
 │   ├── css/
 │   ├── js/
 │   └── img/
 │
-└── uploads/                     # รูปภาพอุปกรณ์
+└── uploads/                     # Equipment Images
 ```
 
 ---
 
-## 🔧 การแก้ไขปัญหาที่พบบ่อย
+## 🔧 Troubleshooting
 
-### ❌ ไม่สามารถเชื่อมต่อฐานข้อมูลได้
-- ตรวจสอบว่า MySQL ใน XAMPP เปิดอยู่
-- ตรวจสอบชื่อฐานข้อมูลใน `includes/config.php`
+### ❌ Cannot connect to database
+- Check if MySQL in XAMPP is running
+- Verify database name in `includes/config.php`
 
-### ❌ หน้าเว็บแสดงข้อผิดพลาด
-- เปิด error reporting ใน PHP
-- ตรวจสอบ PHP version >= 7.4
+### ❌ Page shows errors
+- Enable error reporting in PHP
+- Check PHP version >= 7.4
 
-### ❌ รูปภาพไม่แสดง
-- ตรวจสอบ folder `uploads/` มีสิทธิ์เขียน
-- ตรวจสอบ path ของรูปภาพ
+### ❌ Images not displaying
+- Check if `uploads/` folder has write permissions
+- Verify image paths
 
 ---
 
-## 👥 ผู้พัฒนา
+## 👥 Developer
 
-- **ชื่อโปรเจค**: ระบบยืม-คืนอุปกรณ์กีฬา
+- **Project Name**: Sport Equipment Booking System
 - **GitHub**: [pawit5001/Sport-equipment-booking](https://github.com/pawit5001/Sport-equipment-booking)
 
 ---
 
 ## 📄 License
 
-MIT License - ใช้งานและแก้ไขได้อย่างอิสระ
+MIT License - Free to use and modify
