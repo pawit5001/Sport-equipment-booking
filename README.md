@@ -35,7 +35,7 @@
 - ✅ จัดการอุปกรณ์กีฬา (เพิ่ม/แก้ไข/ลบ)
 - ✅ จัดการผู้จัดจำหน่าย (Suppliers)
 - ✅ จัดการข้อมูลนักศึกษา
-- ✅ อนุมัติ/ปฏิเสธคำขอยืม
+- ✅ ดูรายการยืมทั้งหมด
 - ✅ บันทึกการคืนอุปกรณ์
 - ✅ ตั้งค่าระบบ (จำนวนวันยืมสูงสุด, ค่าปรับ)
 - ✅ ดู Dashboard สถิติต่างๆ
@@ -163,7 +163,7 @@ CREATE TABLE tblbookings (
     BookingDate DATE NOT NULL,
     ReturnDate DATE,
     ActualReturnDate DATE,
-    Status ENUM('pending', 'approved', 'rejected', 'returned', 'overdue') DEFAULT 'pending',
+    Status ENUM('borrowed', 'returned', 'overdue') DEFAULT 'borrowed',
     TotalItems INT DEFAULT 0,
     Notes TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -249,10 +249,10 @@ VALUES ('ADMIN001', 'Administrator', 'admin@example.com', MD5('admin123'), 'admi
 - กรอกข้อมูล: ชื่อ, หมวดหมู่, จำนวน, รูปภาพ
 - สถานะ: พร้อมให้ยืม / ไม่พร้อม
 
-#### 3. อนุมัติการยืม
+#### 3. ดูรายการยืม
 1. ไปที่ **จัดการการยืม**
-2. ดูคำขอยืมที่รอดำเนินการ (สถานะ: Pending)
-3. คลิก **"ดูรายละเอียด"** → **"อนุมัติ"** หรือ **"ปฏิเสธ"**
+2. ดูรายการยืมทั้งหมด
+3. คลิก **"ดูรายละเอียด"** เพื่อดูข้อมูลการยืม
 
 #### 4. บันทึกการคืน
 1. ไปที่ **จัดการการยืม**
