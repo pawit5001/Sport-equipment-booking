@@ -98,7 +98,7 @@ $dbname = "sports_equipment_booking";
 | `tblcategory` | หมวดหมู่อุปกรณ์กีฬา |
 | `tblequipment` | ข้อมูลอุปกรณ์กีฬา |
 | `tblequipment_pricing` | ราคาค่ายืมอุปกรณ์ |
-| `tblsuppliers` | ข้อมูลผู้จัดจำหน่าย |
+| `tblsuppliers` | ข้อมูลผู้รับผิดชอบ |
 | `tblbookings` | รายการยืมอุปกรณ์ |
 | `tblbookingdetails` | รายละเอียดการยืม (อุปกรณ์แต่ละชิ้น) |
 | `tblbooking_settings` | ตั้งค่าระบบการยืม |
