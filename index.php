@@ -4,6 +4,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
+// If already logged in, redirect to dashboard instead of showing login form
+if (isset($_SESSION['login']) && $_SESSION['login']) {
+    header('Location: dashboard.php');
+    exit;
+}
+
 // Handle AJAX login request
 if($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['emailid'])) {
     header('Content-Type: application/json');

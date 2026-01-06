@@ -17,12 +17,12 @@ if ($bookingId <= 0) {
 
 // ดึงข้อมูล booking
 $sql = "SELECT b.*, 
-        m.Name, m.Surname, m.StudentID, m.Email,
-        a.FullName as ReceiverName
-        FROM tblbookings b 
-        JOIN tblmembers m ON b.MemberId = m.id 
-        LEFT JOIN admin a ON b.ReturnedBy = a.id
-        WHERE b.id = :id";
+    m.Name, m.Surname, m.StudentID, m.Email,
+    CONCAT(a.Name, ' ', a.Surname) as ReceiverName
+    FROM tblbookings b 
+    JOIN tblmembers m ON b.MemberId = m.id 
+    LEFT JOIN tblmembers a ON b.ReturnedBy = a.id
+    WHERE b.id = :id";
 $query = $dbh->prepare($sql);
 $query->execute([':id' => $bookingId]);
 $booking = $query->fetch(PDO::FETCH_ASSOC);
